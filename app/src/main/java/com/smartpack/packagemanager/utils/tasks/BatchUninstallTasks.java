@@ -54,12 +54,16 @@ public class BatchUninstallTasks extends sExecutor {
         mProgressDialog.show();
     }
 
+    @SuppressLint("StringFormatInvalid")
     @Override
     public void doInBackground() {
         for (String pkg : mPackageNames) {
             String appName = sPackageUtils.getAppName(pkg, mActivity).toString();
-            
-            mProgressDialog.setMessage(mActivity.getString(R.string.uninstall_summary, appName));
+
+            // Update progress message on UI thread to avoid touching UI from background
+            if (mProgressDialog != null) {
+                mActivity.runOnUiThread(() -> mProgressDialog.setMessage(mActivity.getString(R.string.uninstall_summary, appName)));
+            }
 
             String cmd = "pm uninstall --user " + Utils.getUserID() + " " + pkg;
             boolean success;
@@ -70,16 +74,28 @@ public class BatchUninstallTasks extends sExecutor {
             }
 
             if (success) {
-                PackageItems packageItems = null;
-                for (PackageItems item : PackageData.getRawData()) {
-                    if (pkg.equals(item.getPackageName())) {
-                        packageItems = item;
-                        break;
+                List<PackageItems> raw = PackageData.getRawData();
+                if (raw != null) {
+                    synchronized (PackageData.class) {
+                        PackageItems packageItems = null;
+                        for (PackageItems item : new ArrayList<>(raw)) {
+                            if (pkg.equals(item.getPackageName())) {
+                                packageItems = item;
+                                break;
+                            }
+                        }
+                        if (packageItems != null) {
+                            raw.remove(packageItems);
+                            List<PackageItems> removed = PackageData.getRemovedPackagesData();
+                            if (removed == null) {
+                                removed = PackageData.getRemovedPackagesData(mActivity);
+                            }
+                            if (removed == null) {
+                                removed = new java.util.ArrayList<>();
+                            }
+                            removed.add(new PackageItems(packageItems.getPackageName(), packageItems.getAppName(), packageItems.getSourceDir(), true, (android.content.pm.PackageInfo) null));
+                        }
                     }
-                }
-                if (packageItems != null) {
-                    PackageData.getRawData().remove(packageItems);
-                    PackageData.getRemovedPackagesData().add(new PackageItems(packageItems.getPackageName(), packageItems.getAppName(), packageItems.getSourceDir(), true, (android.content.pm.PackageInfo) null));
                 }
             } else {
                 mResults.add(new BatchOptionsItems(appName, pkg, sPackageUtils.getAppIcon(pkg, mActivity), false, -1));
