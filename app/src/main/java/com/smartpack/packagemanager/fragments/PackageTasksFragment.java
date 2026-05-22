@@ -36,6 +36,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.facebook.shimmer.ShimmerFrameLayout;
+import com.smartpack.packagemanager.databinding.FragmentPackagetasksBinding;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -84,20 +85,22 @@ public class PackageTasksFragment extends Fragment {
     private String mPackageNameRemoved = null, mSearchText = null;
     private View mRootView;
     private boolean mIsFirstLoad = true;
+    private FragmentPackagetasksBinding binding;
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        mRootView = inflater.inflate(R.layout.fragment_packagetasks, container, false);
+        binding = FragmentPackagetasksBinding.inflate(inflater, container, false);
+        mRootView = binding.getRoot();
 
-        mProgress = mRootView.findViewById(R.id.progress);
-        mBatchOptions = mRootView.findViewById(R.id.batch);
+        mProgress = binding.progress;
+        mBatchOptions = binding.batch;
         mRecyclerView = mRootView.findViewById(R.id.recycler_view);
         mSearchWord = mRootView.findViewById(R.id.search_word);
-        MaterialButton mSearch = mRootView.findViewById(R.id.search_icon);
-        TabLayout mTabLayout = mRootView.findViewById(R.id.tab_layout);
-        mSort = mRootView.findViewById(R.id.sort_icon);
-        MaterialButton mReload = mRootView.findViewById(R.id.reload_icon);
+        MaterialButton mSearch = binding.searchIcon;
+        TabLayout mTabLayout = binding.tabLayout;
+        mSort = binding.sortIcon;
+        MaterialButton mReload = binding.reloadIcon;
         FloatingActionButton mFAB = requireActivity().findViewById(R.id.fab);
 
         mFAB.setVisibility(View.VISIBLE);

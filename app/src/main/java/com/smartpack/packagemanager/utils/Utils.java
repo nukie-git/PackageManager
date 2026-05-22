@@ -50,7 +50,7 @@ public class Utils {
         InputMethodManager imm = (InputMethodManager) activity.getSystemService(Activity.INPUT_METHOD_SERVICE);
         if (mode == 1) {
             if (editText.requestFocus()) {
-                imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+                imm.showSoftInput(editText, 0);
             }
         } else {
             imm.hideSoftInputFromWindow(editText.getWindowToken(), 0);

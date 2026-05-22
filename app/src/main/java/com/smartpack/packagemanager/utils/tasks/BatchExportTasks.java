@@ -66,7 +66,9 @@ public class BatchExportTasks extends sExecutor {
                 PackageInfo pi = mActivity.getPackageManager().getPackageInfo(pkg, 0);
                 String exportName = ExportNameBuilder.getExportName(mActivity, pi);
                 
-                mProgressDialog.setMessage(mActivity.getString(R.string.exporting, appName));
+                if (mProgressDialog != null) {
+                    mActivity.runOnUiThread(() -> mProgressDialog.setMessage(mActivity.getString(R.string.exporting, appName)));
+                }
 
                 boolean isBundle = new File(apkPath).getName().equals("base.apk") && 
                                   SplitAPKInstaller.splitApks(sPackageUtils.getParentDir(pkg, mActivity)).size() > 1;

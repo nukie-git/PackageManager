@@ -57,6 +57,7 @@ import in.sunilpaulmathew.sCommon.CommonUtils.sCommonUtils;
 import in.sunilpaulmathew.sCommon.FileUtils.sFileUtils;
 import in.sunilpaulmathew.sCommon.PackageUtils.sPackageUtils;
 import in.sunilpaulmathew.sCommon.PermissionUtils.sPermissionUtils;
+import com.smartpack.packagemanager.databinding.FragmentPackageinfoBinding;
 
 /*
  * Created by sunilpaulmathew <sunil.kde@gmail.com> on February 16, 2021
@@ -65,6 +66,7 @@ public class PackageInfoFragment extends Fragment {
 
     private boolean mLaunchIntent = false, mRootOrShizuku = false, mSystemApp = false;
     private String mAppName, mPackageName;
+    private FragmentPackageinfoBinding binding;
 
     public PackageInfoFragment() {
     }
@@ -97,9 +99,10 @@ public class PackageInfoFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View mRootView = inflater.inflate(R.layout.fragment_packageinfo, container, false);
+        binding = FragmentPackageinfoBinding.inflate(inflater, container, false);
+        View mRootView = binding.getRoot();
 
-        RecyclerView mPackageOptions = mRootView.findViewById(R.id.package_options);
+        RecyclerView mPackageOptions = binding.packageOptions;
         RecyclerView mPackageInfo = mRootView.findViewById(R.id.recycler_view);
 
         PackageOptionsAdapter mPackageOptionsAdapter;
