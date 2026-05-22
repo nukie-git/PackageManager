@@ -65,8 +65,7 @@ public class ExportAPKTasks extends sExecutor {
         sCommonUtils.sleep(1);
         PackageData.makePackageFolder(mActivity);
         try {
-            FileUtils FileUtils = new FileUtils(new File(PackageData.getPackageDir(mActivity), mName + "_" + sAPKUtils.getVersionCode(
-                    sPackageUtils.getSourceDir(mPackageName, mActivity), mActivity) + ".apk"), mProgressDialog);
+            FileUtils FileUtils = new FileUtils(new File(PackageData.getPackageDir(mActivity), mName + ".apk"), mProgressDialog);
             FileUtils.copy(mAPKPath);
         } catch (IOException ignored) {}
     }
@@ -83,8 +82,7 @@ public class ExportAPKTasks extends sExecutor {
                 })
                 .setPositiveButton(mActivity.getString(R.string.share), (dialog, id) -> {
                     Uri uriFile = FileProvider.getUriForFile(mActivity,
-                            BuildConfig.APPLICATION_ID + ".provider", new File(PackageData.getPackageDir(mActivity), mName + "_" +
-                                    sAPKUtils.getVersionCode(sPackageUtils.getSourceDir(mPackageName, mActivity), mActivity) + ".apk"));
+                            BuildConfig.APPLICATION_ID + ".provider", new File(PackageData.getPackageDir(mActivity), mName + ".apk"));
                     Intent shareScript = new Intent(Intent.ACTION_SEND);
                     shareScript.setType("application/java-archive");
                     shareScript.putExtra(Intent.EXTRA_SUBJECT, mActivity.getString(R.string.shared_by, mName));

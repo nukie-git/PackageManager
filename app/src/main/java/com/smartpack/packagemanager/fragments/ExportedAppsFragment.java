@@ -15,8 +15,10 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -39,6 +41,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
@@ -74,6 +77,44 @@ public class ExportedAppsFragment extends Fragment {
     private ExportedAppsAdapter mRecycleViewAdapter;
     private String mSearchText = null;
 
+    private final ActivityResultLauncher<String[]> mPickerLauncher =
+            registerForActivityResult(new ActivityResultContracts.OpenMultipleDocuments(),
+                    uris -> {
+                        if (uris != null && !uris.isEmpty()) {
+                            new com.smartpack.packagemanager.utils.tasks.ImportExternalApkTask(uris, requireActivity()) {
+                                @Override
+                                public void onPostExecute() {
+                                    super.onPostExecute();
+                                    loadUI(mSearchText).execute();
+                                }
+                            }.execute();
+                        }
+                    });
+
+    private void startApkFinder() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                new MaterialAlertDialogBuilder(requireActivity())
+                        .setTitle(R.string.app_name)
+                        .setMessage("APK Finder requires \"All Files Access\" to scan your device storage for app installers. Please grant this permission in the next screen.")
+                        .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                            try {
+                                Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                                intent.setData(Uri.parse("package:" + requireActivity().getPackageName()));
+                                startActivity(intent);
+                            } catch (Exception e) {
+                                Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                                startActivity(intent);
+                            }
+                        })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+                return;
+            }
+        }
+        new com.smartpack.packagemanager.utils.tasks.APKScannerTasks(requireActivity()).execute();
+    }
+
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -87,8 +128,24 @@ public class ExportedAppsFragment extends Fragment {
         mRecyclerView = mRootView.findViewById(R.id.recycler_view);
         TabLayout mTabLayout = mRootView.findViewById(R.id.tab_layout);
         FloatingActionButton mFAB = requireActivity().findViewById(R.id.fab);
+        MaterialButton mImport = mRootView.findViewById(R.id.import_icon);
 
         mFAB.setVisibility(VISIBLE);
+
+        mImport.setOnClickListener(v -> {
+            PopupMenu popupMenu = new PopupMenu(requireActivity(), mImport);
+            popupMenu.getMenu().add(0, 0, 0, R.string.apks);
+            popupMenu.getMenu().add(0, 1, 0, R.string.apk_finder);
+            popupMenu.setOnMenuItemClickListener(item -> {
+                if (item.getItemId() == 0) {
+                    mPickerLauncher.launch(new String[]{"application/vnd.android.package-archive"});
+                } else {
+                    startApkFinder();
+                }
+                return true;
+            });
+            popupMenu.show();
+        });
 
         mTabLayout.addTab(mTabLayout.newTab().setText(getString(R.string.apks)));
         mTabLayout.addTab(mTabLayout.newTab().setText(getString(R.string.bundles)));
@@ -280,6 +337,7 @@ public class ExportedAppsFragment extends Fragment {
                 mSort.setEnabled(mRecycleViewAdapter.getItemCount() >= 5);
                 mBatch.setVisibility(mBatchList.isEmpty() ? GONE : VISIBLE);
                 mRecyclerView.setAdapter(mRecycleViewAdapter);
+                mRecyclerView.setVisibility(VISIBLE);
                 mProgress.setVisibility(GONE);
             }
         };

@@ -193,7 +193,7 @@ public class InstallerActivity extends BaseActivity {
                                 sPackageUtils.getAppName(mPackageName, InstallerActivity.this).toString(),
                                 sPackageUtils.getSourceDir(mPackageName, InstallerActivity.this),
                                 false,
-                                InstallerActivity.this)
+                                (android.content.pm.PackageInfo) null)
                         );
                         result.putExtra("INSTALL_STATUS_UPDATE", false);
                     } else {

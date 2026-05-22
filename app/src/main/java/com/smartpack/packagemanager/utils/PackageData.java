@@ -8,6 +8,7 @@
 
 package com.smartpack.packagemanager.utils;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
@@ -20,6 +21,7 @@ import com.smartpack.packagemanager.R;
 import com.smartpack.packagemanager.utils.SerializableItems.PackageItems;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -27,14 +29,26 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import in.sunilpaulmathew.sCommon.CommonUtils.sCommonUtils;
 import in.sunilpaulmathew.sCommon.FileUtils.sFileUtils;
-import in.sunilpaulmathew.sCommon.PackageUtils.sPackageUtils;
 
 /*
  * Created by sunilpaulmathew <sunil.kde@gmail.com> on January 12, 2020
  */
 public class PackageData {
 
-    private static List<PackageItems> mRawData = null,  mRemovedData = null;
+    /**
+     * Initialize package data loading.
+     * This method triggers generateData with no progress bar.
+     * @param activity Activity context used for package manager access.
+     */
+    public static void init(Activity activity) {
+        if (mRawData == null) {
+            generateData(null, activity, false);
+        }
+    }
+
+    private static volatile List<PackageItems> mRawData = null;
+    private static volatile List<PackageItems> mRemovedData = null;
+    private static volatile boolean mIsUninstalledScanned = false;
 
     public static boolean isTextMatched(String text, String searchText) {
         for (int a = 0; a < text.length() - searchText.length() + 1; a++) {
@@ -64,14 +78,20 @@ public class PackageData {
     }
 
     public static List<PackageItems> getData(String searchTxt, Context context) {
-        List<PackageItems> mData = new CopyOnWriteArrayList<>();
-        if (getRawData() != null) {
-            boolean mAppType;
-            for (PackageItems item : getRawData()) {
-                if (sCommonUtils.getString("appTypes", "all", context).equals("system")) {
-                    mAppType = (sPackageUtils.isSystemApp(item.getPackageName(), context));
-                } else if (sCommonUtils.getString("appTypes", "all", context).equals("user")) {
-                    mAppType = (!sPackageUtils.isSystemApp(item.getPackageName(), context));
+        android.util.Log.d("SmartPack", "getData: searchTxt=" + searchTxt + ", mRawData is " + (mRawData == null ? "null" : "size " + mRawData.size()));
+        if (getRawData() == null) {
+            generateData(null, context);
+        }
+        List<PackageItems> mData = new ArrayList<>();
+        List<PackageItems> rawData = getRawData();
+        if (rawData != null) {
+            String appTypePref = sCommonUtils.getString("appTypes", "all", context);
+            for (PackageItems item : rawData) {
+                boolean mAppType;
+                if (appTypePref.equals("system")) {
+                    mAppType = item.isSystemApp();
+                } else if (appTypePref.equals("user")) {
+                    mAppType = item.isUserApp();
                 } else {
                     mAppType = true;
                 }
@@ -81,22 +101,32 @@ public class PackageData {
                         mData.add(item);
                     }
                 }
-                if (PackageData.getSortingType(context) == 0) {
-                    mData.sort((lhs, rhs) -> String.CASE_INSENSITIVE_ORDER.compare(lhs.getAppName(), rhs.getAppName()));
-                } else if (PackageData.getSortingType(context) == 4) {
-                    mData.sort(Comparator.comparingLong(PackageItems::getAPKSize));
-                } else if (PackageData.getSortingType(context) == 2) {
-                    mData.sort(Comparator.comparingLong(PackageItems::getInstalledTime));
-                } else if (PackageData.getSortingType(context) == 3) {
-                    mData.sort(Comparator.comparingLong(PackageItems::getUpdatedTime));
-                } else {
-                    mData.sort((lhs, rhs) -> String.CASE_INSENSITIVE_ORDER.compare(lhs.getPackageName(), rhs.getPackageName()));
-                }
+            }
+            int sortType = PackageData.getSortingType(context);
+            if (sortType == 0) {
+                mData.sort((lhs, rhs) -> {
+                    String nameA = lhs.getAppName() != null ? lhs.getAppName() : (lhs.getPackageName() != null ? lhs.getPackageName() : "");
+                    String nameB = rhs.getAppName() != null ? rhs.getAppName() : (rhs.getPackageName() != null ? rhs.getPackageName() : "");
+                    return String.CASE_INSENSITIVE_ORDER.compare(nameA, nameB);
+                });
+            } else if (sortType == 4) {
+                mData.sort(Comparator.comparingLong(PackageItems::getAPKSize));
+            } else if (sortType == 2) {
+                mData.sort(Comparator.comparingLong(PackageItems::getInstalledTime));
+            } else if (sortType == 3) {
+                mData.sort(Comparator.comparingLong(PackageItems::getUpdatedTime));
+            } else {
+                mData.sort((lhs, rhs) -> {
+                    String pkgA = lhs.getPackageName() != null ? lhs.getPackageName() : "";
+                    String pkgB = rhs.getPackageName() != null ? rhs.getPackageName() : "";
+                    return String.CASE_INSENSITIVE_ORDER.compare(pkgA, pkgB);
+                });
             }
             if (sCommonUtils.getBoolean("reverse_order", false, context)) {
                 Collections.reverse(mData);
             }
         }
+        android.util.Log.d("SmartPack", "getData: returning " + mData.size() + " items");
         return mData;
     }
 
@@ -109,9 +139,10 @@ public class PackageData {
     }
 
     public static String getFileName(String packageName, Context context) {
-        if (sCommonUtils.getString("exportedAPKName", context.getString(R.string.package_id), context).equals(context.getString(R.string.name))) {
-            return sPackageUtils.getAppName(packageName, context).toString();
-        } else {
+        try {
+            PackageInfo pi = context.getPackageManager().getPackageInfo(packageName, 0);
+            return ExportNameBuilder.getExportName(context, pi);
+        } catch (Exception e) {
             return packageName;
         }
     }
@@ -149,47 +180,108 @@ public class PackageData {
         return mRemovedData;
     }
 
+    public static List<PackageItems> getRemovedPackagesData(Context context) {
+        if (mRemovedData == null || !mIsUninstalledScanned) {
+            generateData(null, context, true);
+        }
+        return mRemovedData;
+    }
+
     public static void generateData(ProgressBar progressBar, Context context) {
-        mRawData = new CopyOnWriteArrayList<>();
-        mRemovedData = new CopyOnWriteArrayList<>();
+        generateData(progressBar, context, mIsUninstalledScanned);
+    }
+
+    public static synchronized void generateData(ProgressBar progressBar, Context context, boolean includeUninstalled) {
+        android.util.Log.d("SmartPack", "generateData: start package scanning, includeUninstalled=" + includeUninstalled);
+        List<PackageItems> rawDataTemp = new ArrayList<>();
+        List<PackageItems> removedDataTemp = new ArrayList<>();
+        mIsUninstalledScanned = includeUninstalled;
+        if (context == null) {
+            android.util.Log.e("SmartPack", "generateData: context is null");
+            return;
+        }
         PackageManager pm = context.getPackageManager();
-        List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.MATCH_UNINSTALLED_PACKAGES);
-        if (progressBar != null) {
-            if (progressBar.isIndeterminate()) {
-                progressBar.setIndeterminate(false);
-            }
-            progressBar.setMax(packages.size());
+        if (pm == null) {
+            android.util.Log.e("SmartPack", "generateData: PackageManager is null");
+            return;
         }
-        for (ApplicationInfo packageInfo: packages) {
-            boolean disabled = !packageInfo.enabled;
-            boolean removed = (packageInfo.flags & ApplicationInfo.FLAG_INSTALLED) == 0;
-            String appName = pm.getApplicationLabel(packageInfo).toString();
-            String apkPath = packageInfo.sourceDir;
-            if (removed) {
-                mRemovedData.add(new PackageItems(
-                        packageInfo.packageName,
-                        appName,
-                        apkPath,
-                        true,
-                        context)
-                );
-            } else {
-                mRawData.add(new PackageItems(
-                        packageInfo.packageName,
-                        appName + (disabled ? " (Disabled)" : ""),
-                        apkPath,
-                        false,
-                        context)
-                );
+
+        List<PackageInfo> packages = new java.util.ArrayList<>();
+        int flags = includeUninstalled ? PackageManager.MATCH_UNINSTALLED_PACKAGES : 0;
+        try {
+            List<PackageInfo> installed = pm.getInstalledPackages(flags);
+            if (installed != null) {
+                packages.addAll(installed);
             }
-            if (progressBar != null) {
-                if (progressBar.getProgress() < packages.size()) {
-                    progressBar.setProgress(progressBar.getProgress() + 1);
-                } else {
-                    progressBar.setProgress(0);
+            android.util.Log.d("SmartPack", "generateData: getInstalledPackages (" + flags + ") returned " + packages.size() + " apps");
+        } catch (Exception e) {
+            android.util.Log.e("SmartPack", "generateData: failed getInstalledPackages (" + flags + ")", e);
+            try {
+                List<PackageInfo> installed = pm.getInstalledPackages(0);
+                if (installed != null) {
+                    packages.addAll(installed);
                 }
+                android.util.Log.d("SmartPack", "generateData: getInstalledPackages (0) returned " + packages.size() + " apps");
+            } catch (Exception ex) {
+                android.util.Log.e("SmartPack", "generateData: failed getInstalledPackages (0)", ex);
             }
         }
+
+        final int totalSize = packages.size();
+        final android.os.Handler handler = progressBar != null ? new android.os.Handler(android.os.Looper.getMainLooper()) : null;
+
+        if (progressBar != null && handler != null) {
+            handler.post(() -> {
+                if (progressBar.isIndeterminate()) {
+                    progressBar.setIndeterminate(false);
+                }
+                progressBar.setMax(totalSize);
+            });
+        }
+
+        for (int i = 0; i < totalSize; i++) {
+            PackageInfo pi = packages.get(i);
+            if (pi == null || pi.applicationInfo == null) continue;
+            try {
+                ApplicationInfo ai = pi.applicationInfo;
+                boolean disabled = !ai.enabled;
+                boolean removed = (ai.flags & ApplicationInfo.FLAG_INSTALLED) == 0;
+                
+                CharSequence label = ai.nonLocalizedLabel;
+                if (label == null) {
+                    label = pm.getApplicationLabel(ai);
+                }
+                
+                String appName = label.toString();
+                String apkPath = ai.sourceDir != null ? ai.sourceDir : "";
+                if (removed) {
+                    removedDataTemp.add(new PackageItems(
+                            pi.packageName,
+                            appName,
+                            apkPath,
+                            true,
+                            pi)
+                    );
+                } else {
+                    rawDataTemp.add(new PackageItems(
+                            pi.packageName,
+                            appName + (disabled ? " (Disabled)" : ""),
+                            apkPath,
+                            false,
+                            pi)
+                    );
+                }
+            } catch (Exception e) {
+                android.util.Log.e("SmartPack", "generateData: error processing package: " + pi.packageName, e);
+            }
+            if (progressBar != null && handler != null && (i % 10 == 0 || i == totalSize - 1)) {
+                final int currentProgress = i + 1;
+                handler.post(() -> progressBar.setProgress(currentProgress));
+            }
+        }
+        mRawData = new CopyOnWriteArrayList<>(rawDataTemp);
+        mRemovedData = new CopyOnWriteArrayList<>(removedDataTemp);
+        android.util.Log.d("SmartPack", "generateData: finished package scanning. mRawData size: " + mRawData.size() + ", mRemovedData size: " + mRemovedData.size());
     }
 
     public static void setSortingType(int value, Context context) {

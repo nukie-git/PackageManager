@@ -76,13 +76,21 @@ public class PackageDetails {
     public static List<PermissionsItems> getPermissions(String packageName, Context context) {
         List<PermissionsItems> perms = new ArrayList<>();
         try {
-            for (int i = 0; i < Objects.requireNonNull(PackageData.getPackageInfo(packageName, context)).requestedPermissions.length; i++) {
-                PackageInfo perm = Objects.requireNonNull(PackageData.getPackageInfo(packageName, context));
-                perms.add(new PermissionsItems((perm.requestedPermissionsFlags[i] & PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0,
-                        perm.requestedPermissions[i], sPermissionUtils.getDescription(perm.requestedPermissions[i]
-                        .replace("android.permission.",""), context)));
+            PackageInfo pi = PackageData.getPackageInfo(packageName, context);
+            if (pi != null && pi.requestedPermissions != null) {
+                for (int i = 0; i < pi.requestedPermissions.length; i++) {
+                    boolean granted = false;
+                    if (pi.requestedPermissionsFlags != null && i < pi.requestedPermissionsFlags.length) {
+                        granted = (pi.requestedPermissionsFlags[i] & PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0;
+                    }
+                    String permissionName = pi.requestedPermissions[i];
+                    if (permissionName != null) {
+                        String desc = sPermissionUtils.getDescription(permissionName.replace("android.permission.", ""), context);
+                        perms.add(new PermissionsItems(granted, permissionName, desc));
+                    }
+                }
             }
-        } catch (NullPointerException ignored) {
+        } catch (Exception ignored) {
         }
         return perms;
     }

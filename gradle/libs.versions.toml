@@ -2,11 +2,12 @@
 core = "6.0.0"
 agp = "9.1.1"
 documentfileVersion = "1.1.0"
-material = "1.13.0"
+material = "1.14.0"
 shizuku = "13.1.5"
 scommon = "d532608ca4"
 axml = "51db0eecad"
 zip4j = "2.11.6"
+shimmer = "0.5.0"
 
 [libraries]
 axml = { module = "com.github.apk-editor:aXML", version.ref = "axml" }
@@ -22,6 +23,7 @@ provider = { module = "dev.rikka.shizuku:provider", version.ref = "shizuku" }
 core = { module = "com.github.topjohnwu.libsu:core", version.ref = "core" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 zip4j = { module = "net.lingala.zip4j:zip4j", version.ref = "zip4j" }
+shimmer = { module = "com.facebook.shimmer:shimmer", version.ref = "shimmer" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

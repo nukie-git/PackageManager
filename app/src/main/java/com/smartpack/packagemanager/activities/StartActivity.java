@@ -26,6 +26,7 @@ import com.smartpack.packagemanager.utils.PackageData;
 import in.sunilpaulmathew.sCommon.CommonUtils.sCommonUtils;
 import in.sunilpaulmathew.sCommon.CommonUtils.sExecutor;
 import in.sunilpaulmathew.sCommon.ThemeUtils.sThemeUtils;
+import com.smartpack.packagemanager.utils.ThemeHelper;
 
 /*
  * Created by sunilpaulmathew <sunil.kde@gmail.com> on November 1, 2020
@@ -35,7 +36,7 @@ public class StartActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // Initialize App Theme
-        sThemeUtils.initializeAppTheme(this);
+        ThemeHelper.applyTheme(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_start);
 

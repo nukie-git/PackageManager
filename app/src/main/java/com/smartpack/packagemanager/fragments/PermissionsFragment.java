@@ -74,14 +74,26 @@ public class PermissionsFragment extends Fragment {
         RecyclerView mRecyclerView = mRootView.findViewById(R.id.recycler_view);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         mRecyclerView.addItemDecoration(new DividerItemDecoration(requireActivity(), DividerItemDecoration.VERTICAL));
-        PermissionsAdapter mRecycleViewAdapter = new PermissionsAdapter(mAPKParser.getPermissions()
-                != null ? getPermissions(requireActivity()) : PackageDetails.getPermissions(mPackageName, requireActivity()), mPackageName, mAPKPicked);
+        List<PermissionsItems> permissionsList;
+        try {
+            if (mAPKPicked && mAPKParser != null && mAPKParser.getPermissions() != null) {
+                permissionsList = getPermissions(requireActivity());
+            } else {
+                permissionsList = PackageDetails.getPermissions(mPackageName, requireActivity());
+            }
+        } catch (Exception e) {
+            permissionsList = PackageDetails.getPermissions(mPackageName, requireActivity());
+        }
+        if (permissionsList == null) {
+            permissionsList = new ArrayList<>();
+        }
+
+        PermissionsAdapter mRecycleViewAdapter = new PermissionsAdapter(permissionsList, mPackageName, mAPKPicked);
         mRecyclerView.setAdapter(mRecycleViewAdapter);
 
-        requireActivity().getOnBackPressedDispatcher().addCallback(new OnBackPressedCallback(true) {
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (!isAdded()) return;
                 requireActivity().finish();
             }
         });

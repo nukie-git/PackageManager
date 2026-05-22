@@ -36,7 +36,7 @@ public class MultipleAPKsTasks extends sExecutor {
     private final Activity mActivity;
     private static ArrayList<String> mAPKs;
     private final ActivityResultLauncher<Intent> mInstallApp;
-    private static ProgressDialog mProgressDialog;
+    private ProgressDialog mProgressDialog;
     private final ClipData mURIFiles;
 
     public MultipleAPKsTasks(ClipData uriFiles, ActivityResultLauncher<Intent> installApp, Activity activity) {

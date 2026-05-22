@@ -3,6 +3,9 @@
 
     <string name="activities">Activities</string>
     <string name="apk_installer_description">An individual APK file</string>
+    <string name="apk_finder">APK Finder</string>
+    <string name="apk_finder_desc">Scan storage for app installers</string>
+    <string name="apk_finder_move">Move &amp; Rename</string>
     <string name="apk_path">APK Path</string>
     <string name="app_info">App info</string>
     <string name="applications">Applications</string>
@@ -202,4 +205,10 @@
     <string name="welcome_message">Welcome to Package Manager — effortlessly manage your apps with a powerful, intuitive tool.</string>
     <string name="wrong_extension">Please select a file with %s extension.</string>
     <string name="yes">Yes</string>
+    <string name="export_name_mode_app_pkg_ver">App Name + Package ID + Version</string>
+    <string name="export_name_mode_custom">Custom Template</string>
+    <string name="app_theme">App Theme</string>
+    <string name="app_theme_auto">Auto</string>
+    <string name="app_theme_dark">Dark</string>
+    <string name="app_theme_light">Light</string>
 </resources>

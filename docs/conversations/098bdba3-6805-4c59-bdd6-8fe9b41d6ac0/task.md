@@ -1,0 +1,22 @@
+- [x] Task 0D & 3: Data Pipeline Robustness & Null-Safe Sorting
+  - [x] Implement visibility & uninstalled safety in `PackageData.generateData()`
+  - [x] Implement null safety checks in `PackageItems.java`
+- [x] Task 1: Material 3 Theme & Toggle
+  - [x] Implement `ThemeHelper.java`
+  - [x] Define theme preferences in `AppSettings.java`
+  - [x] Wire theme calls in `BaseActivity.java`, `MainActivity.java`, and `StartActivity.java`
+  - [x] Wire theme settings UI in `SettingsFragment.java`
+- [x] Task 2: ExportNameBuilder Integration
+  - [x] Implement `ExportNameBuilder.java`
+  - [x] Define export preference helpers in `AppSettings.java`
+  - [x] Integrate into `ExportAPKTasks.java` and `ExportBundleTasks.java`
+  - [x] Add settings UI for custom naming in `SettingsFragment.java`
+- [x] Task 4: Permissions Editor Lifecycle Safety
+  - [x] Add `getViewLifecycleOwner()` safety guard for back callbacks in `PermissionsFragment.java`
+  - [x] Add null check for permissions data in `PermissionsFragment.java`
+- [x] Task 5: Gradle Upgrade
+  - [x] Update `gradle-wrapper.properties` to version 8.12
+- [x] Task 6: Pre-build Validation
+  - [x] Verify Gradle version
+  - [x] Audit deprecated API usage in `PackageTasksFragment.java`
+  - [x] Build final package

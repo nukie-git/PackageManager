@@ -63,7 +63,7 @@ public class UninstallSystemAppsTasks extends sExecutor {
                 .orElse(null);
         if (packageItems != null) {
             PackageData.getRawData().remove(packageItems);
-            PackageData.getRemovedPackagesData().add(new PackageItems(packageItems.getPackageName(), packageItems.getAppName(), packageItems.getSourceDir(), true, mActivity));
+            PackageData.getRemovedPackagesData().add(new PackageItems(packageItems.getPackageName(), packageItems.getAppName(), packageItems.getSourceDir(), true, (android.content.pm.PackageInfo) null));
         }
     }
 

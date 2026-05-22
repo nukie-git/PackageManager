@@ -31,7 +31,7 @@ public class SaveToDownloadsTasks extends sExecutor {
     private File mParentFile;
     private final File mSource;
     private final String mPackageName;
-    private static ProgressDialog mProgressDialog;
+    private ProgressDialog mProgressDialog;
 
     public SaveToDownloadsTasks(File source, String packageName, Context context) {
         mSource = source;

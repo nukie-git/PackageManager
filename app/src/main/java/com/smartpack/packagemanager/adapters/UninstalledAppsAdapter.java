@@ -130,7 +130,7 @@ public class UninstalledAppsAdapter extends RecyclerView.Adapter<UninstalledApps
                 }
 
                 PackageData.getRemovedPackagesData().remove(packageItems);
-                PackageData.getRawData().add(new PackageItems(packageItems.getPackageName(), packageItems.getAppName(), packageItems.getSourceDir(), false, context));
+                PackageData.getRawData().add(new PackageItems(packageItems.getPackageName(), packageItems.getAppName(), packageItems.getSourceDir(), false, (android.content.pm.PackageInfo) null));
             }
 
             @Override

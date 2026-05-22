@@ -10,6 +10,8 @@ package com.smartpack.packagemanager.dialogs;
 
 import android.content.Context;
 import android.graphics.drawable.Drawable;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 
@@ -24,9 +26,10 @@ import com.smartpack.packagemanager.R;
  */
 public class ProgressDialog {
 
-    private static AlertDialog mAlertDialog = null;
-    private static ContentLoadingProgressBar mProgressBar = null;
-    private static MaterialAlertDialogBuilder mDialogBuilder = null;
+    private AlertDialog mAlertDialog = null;
+    private final ContentLoadingProgressBar mProgressBar;
+    private final MaterialAlertDialogBuilder mDialogBuilder;
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     public ProgressDialog(Context context) {
         LayoutInflater layoutInflater = LayoutInflater.from(context);
@@ -38,7 +41,7 @@ public class ProgressDialog {
     }
 
     public boolean isShowing() {
-        return mAlertDialog.isShowing();
+        return mAlertDialog != null && mAlertDialog.isShowing();
     }
 
     public int getProgress() {
@@ -46,12 +49,20 @@ public class ProgressDialog {
     }
 
     public void show() {
-        mAlertDialog = mDialogBuilder.create();
-        mAlertDialog.show();
+        mHandler.post(() -> {
+            if (mAlertDialog == null) {
+                mAlertDialog = mDialogBuilder.create();
+            }
+            mAlertDialog.show();
+        });
     }
 
     public void dismiss() {
-        mAlertDialog.dismiss();
+        mHandler.post(() -> {
+            if (mAlertDialog != null) {
+                mAlertDialog.dismiss();
+            }
+        });
     }
 
     public void setIcon(int resourceID) {
@@ -64,36 +75,60 @@ public class ProgressDialog {
 
     public void setMessage(int resourceID) {
         mDialogBuilder.setMessage(resourceID);
+        mHandler.post(() -> {
+            if (mAlertDialog != null) {
+                mAlertDialog.setMessage(mAlertDialog.getContext().getString(resourceID));
+            }
+        });
     }
 
     public void setMessage(CharSequence charSequence) {
         mDialogBuilder.setMessage(charSequence);
+        mHandler.post(() -> {
+            if (mAlertDialog != null) {
+                mAlertDialog.setMessage(charSequence);
+            }
+        });
     }
 
     public void setTitle(int resourceID) {
         mDialogBuilder.setTitle(resourceID);
+        mHandler.post(() -> {
+            if (mAlertDialog != null) {
+                mAlertDialog.setTitle(mAlertDialog.getContext().getString(resourceID));
+            }
+        });
     }
 
     public void setTitle(CharSequence charSequence) {
         mDialogBuilder.setTitle(charSequence);
+        mHandler.post(() -> {
+            if (mAlertDialog != null) {
+                mAlertDialog.setTitle(charSequence);
+            }
+        });
     }
 
     public void setIndeterminate(boolean b) {
-        mProgressBar.setIndeterminate(b);
+        mHandler.post(() -> mProgressBar.setIndeterminate(b));
     }
 
     public void setMax(int max) {
-        setIndeterminate(false);
-        mProgressBar.setMax(max);
+        mHandler.post(() -> {
+            mProgressBar.setIndeterminate(false);
+            mProgressBar.setMax(max);
+        });
     }
 
     public void updateProgress(int progress) {
-        if (mProgressBar.getProgress() < mProgressBar.getMax()) {
-            mProgressBar.setProgress(mProgressBar.getProgress() + progress);
-        } else {
-            mProgressBar.setProgress(0);
-            setIndeterminate(true);
-        }
+        mHandler.post(() -> {
+            if (mProgressBar.getProgress() < mProgressBar.getMax()) {
+                mProgressBar.setProgress(mProgressBar.getProgress() + progress);
+            } else {
+                mProgressBar.setProgress(0);
+                mProgressBar.setIndeterminate(true);
+            }
+        });
     }
 
 }

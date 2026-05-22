@@ -1,0 +1,677 @@
+commit c429877940d5cd820f41690b9795dce45bd842f6
+Author: sunilpaulmathew <sunil.kde@gmail.com>
+Date:   Tue Nov 4 15:17:13 2025 +0100
+
+    Show currect status after enable/disable-ing an app
+    
+    Signed-off-by: sunilpaulmathew <sunil.kde@gmail.com>
+
+diff --git a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+index fdc59cd..b6a379b 100644
+--- a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
++++ b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+@@ -108,13 +108,9 @@ public class PackageData {
+         return null;
+     }
+ 
+-    public static String getAppName(String packageName, Context context) {
+-        return sPackageUtils.getAppName(packageName, context) + (sPackageUtils.isEnabled(packageName, context) ? "" : " (Disabled)");
+-    }
+-
+     public static String getFileName(String packageName, Context context) {
+         if (sCommonUtils.getString("exportedAPKName", context.getString(R.string.package_id), context).equals(context.getString(R.string.name))) {
+-            return getAppName(packageName, context);
++            return sPackageUtils.getAppName(packageName, context).toString();
+         } else {
+             return packageName;
+         }
+@@ -172,7 +168,7 @@ public class PackageData {
+             if (removed) {
+                 mRemovedData.add(new PackageItems(
+                         packageInfo.packageName,
+-                        appName + (disabled ? " (Disabled)" : ""),
++                        appName,
+                         apkPath,
+                         true,
+                         context)
+@@ -180,7 +176,7 @@ public class PackageData {
+             } else {
+                 mRawData.add(new PackageItems(
+                         packageInfo.packageName,
+-                        appName,
++                        appName + (disabled ? " (Disabled)" : ""),
+                         apkPath,
+                         false,
+                         context)
+
+commit 06a55ce3dec13a02dc529730360b3c4d9f0c4feb
+Author: sunilpaulmathew <sunil.kde@gmail.com>
+Date:   Mon Oct 27 23:21:05 2025 +0100
+
+    Clean and simplify packageItems to fix sort by APK size working
+    but likely make app loading bit slower though
+    
+    Signed-off-by: sunilpaulmathew <sunil.kde@gmail.com>
+
+diff --git a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+index b9648be..fdc59cd 100644
+--- a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
++++ b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+@@ -137,17 +137,12 @@ public class PackageData {
+         }
+     }
+ 
+-    public static String getBundleSize(String path) {
++    public static long getBundleSize(String path) {
+         long size = 0;
+         for (String mSplit : SplitAPKInstaller.splitApks(path)) {
+-            size += new File(path, mSplit).length() / 1024;
+-        }
+-        long decimal = (size - 1024) / 1024;
+-        if (size > 1024) {
+-            return size / 1024 + "." + decimal + " MB";
+-        } else {
+-            return size  + " KB";
++            size += new File(path, mSplit).length();
+         }
++        return size;
+     }
+ 
+     public static List<PackageItems> getRawData() {
+
+commit 93d574883db8aeaf37460c6a92b4ffb08ee0d60d
+Author: sunilpaulmathew <sunil.kde@gmail.com>
+Date:   Mon Oct 13 13:01:11 2025 +0200
+
+    Uniinstalled apps: Enhance main view by incorporating app name & icon
+    
+    Signed-off-by: sunilpaulmathew <sunil.kde@gmail.com>
+
+diff --git a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+index c72820e..b9648be 100644
+--- a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
++++ b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+@@ -20,10 +20,10 @@ import com.smartpack.packagemanager.R;
+ import com.smartpack.packagemanager.utils.SerializableItems.PackageItems;
+ 
+ import java.io.File;
+-import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.Comparator;
+ import java.util.List;
++import java.util.concurrent.CopyOnWriteArrayList;
+ 
+ import in.sunilpaulmathew.sCommon.CommonUtils.sCommonUtils;
+ import in.sunilpaulmathew.sCommon.FileUtils.sFileUtils;
+@@ -34,7 +34,7 @@ import in.sunilpaulmathew.sCommon.PackageUtils.sPackageUtils;
+  */
+ public class PackageData {
+ 
+-    private static List<PackageItems> mRawData = null;
++    private static List<PackageItems> mRawData = null,  mRemovedData = null;
+ 
+     public static boolean isTextMatched(String text, String searchText) {
+         for (int a = 0; a < text.length() - searchText.length() + 1; a++) {
+@@ -63,35 +63,8 @@ public class PackageData {
+ 
+     }
+ 
+-    private static List<PackageItems> getRawData(ProgressBar progressBar, Context context) {
+-        List<PackageItems> mRawData = new ArrayList<>();
+-        List<ApplicationInfo> packages = context.getPackageManager().getInstalledApplications(PackageManager.GET_META_DATA);
+-        if (progressBar != null) {
+-            if (progressBar.isIndeterminate()) {
+-                progressBar.setIndeterminate(false);
+-            }
+-            progressBar.setMax(packages.size());
+-        }
+-        for (ApplicationInfo packageInfo: packages) {
+-            mRawData.add(new PackageItems(
+-                    packageInfo.packageName,
+-                    getAppName(packageInfo.packageName, context),
+-                    new File(sPackageUtils.getSourceDir(packageInfo.packageName, context)).length(),
+-                    context)
+-            );
+-            if (progressBar != null) {
+-                if (progressBar.getProgress() < packages.size()) {
+-                    progressBar.setProgress(progressBar.getProgress() + 1);
+-                } else {
+-                    progressBar.setProgress(0);
+-                }
+-            }
+-        }
+-        return mRawData;
+-    }
+-
+     public static List<PackageItems> getData(String searchTxt, Context context) {
+-        List<PackageItems> mData = new ArrayList<>();
++        List<PackageItems> mData = new CopyOnWriteArrayList<>();
+         if (getRawData() != null) {
+             boolean mAppType;
+             for (PackageItems item : getRawData()) {
+@@ -181,8 +154,51 @@ public class PackageData {
+         return mRawData;
+     }
+ 
+-    public static void setRawData(ProgressBar progressBar, Context context) {
+-        mRawData = getRawData(progressBar, context);
++    public static List<PackageItems> getRemovedPackagesData() {
++        return mRemovedData;
++    }
++
++    public static void generateData(ProgressBar progressBar, Context context) {
++        mRawData = new CopyOnWriteArrayList<>();
++        mRemovedData = new CopyOnWriteArrayList<>();
++        PackageManager pm = context.getPackageManager();
++        List<ApplicationInfo> packages = pm.getInstalledApplications(PackageManager.MATCH_UNINSTALLED_PACKAGES);
++        if (progressBar != null) {
++            if (progressBar.isIndeterminate()) {
++                progressBar.setIndeterminate(false);
++            }
++            progressBar.setMax(packages.size());
++        }
++        for (ApplicationInfo packageInfo: packages) {
++            boolean disabled = !packageInfo.enabled;
++            boolean removed = (packageInfo.flags & ApplicationInfo.FLAG_INSTALLED) == 0;
++            String appName = pm.getApplicationLabel(packageInfo).toString();
++            String apkPath = packageInfo.sourceDir;
++            if (removed) {
++                mRemovedData.add(new PackageItems(
++                        packageInfo.packageName,
++                        appName + (disabled ? " (Disabled)" : ""),
++                        apkPath,
++                        true,
++                        context)
++                );
++            } else {
++                mRawData.add(new PackageItems(
++                        packageInfo.packageName,
++                        appName,
++                        apkPath,
++                        false,
++                        context)
++                );
++            }
++            if (progressBar != null) {
++                if (progressBar.getProgress() < packages.size()) {
++                    progressBar.setProgress(progressBar.getProgress() + 1);
++                } else {
++                    progressBar.setProgress(0);
++                }
++            }
++        }
+     }
+ 
+     public static void setSortingType(int value, Context context) {
+
+commit c622af8f058d3ecdfd61058885f040d149733a1e
+Author: sunilpaulmathew <sunil.kde@gmail.com>
+Date:   Wed Sep 17 15:24:21 2025 +0200
+
+    Main: Revert transfering packageitems to PackageDetails activity
+    as it seems to slow down with little to no benefits
+    
+    Signed-off-by: sunilpaulmathew <sunil.kde@gmail.com>
+
+diff --git a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+index 89c75f1..c72820e 100644
+--- a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
++++ b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+@@ -24,7 +24,6 @@ import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.Comparator;
+ import java.util.List;
+-import java.util.Objects;
+ 
+ import in.sunilpaulmathew.sCommon.CommonUtils.sCommonUtils;
+ import in.sunilpaulmathew.sCommon.FileUtils.sFileUtils;
+@@ -78,8 +77,7 @@ public class PackageData {
+                     packageInfo.packageName,
+                     getAppName(packageInfo.packageName, context),
+                     new File(sPackageUtils.getSourceDir(packageInfo.packageName, context)).length(),
+-                    Objects.requireNonNull(getPackageInfo(packageInfo.packageName, context)).firstInstallTime,
+-                    Objects.requireNonNull(getPackageInfo(packageInfo.packageName, context)).lastUpdateTime)
++                    context)
+             );
+             if (progressBar != null) {
+                 if (progressBar.getProgress() < packages.size()) {
+
+commit 31670e4201df5f9ae56da7bd3d1ae6011d24d373
+Author: sunilpaulmathew <sunil.kde@gmail.com>
+Date:   Wed Sep 17 14:50:54 2025 +0200
+
+    Removed progress update as it liekly crash app in certain cases
+    
+    Signed-off-by: sunilpaulmathew <sunil.kde@gmail.com>
+
+diff --git a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+index 976b962..89c75f1 100644
+--- a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
++++ b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+@@ -92,50 +92,39 @@ public class PackageData {
+         return mRawData;
+     }
+ 
+-    public static List<PackageItems> getData(String searchTxt, ProgressBar progressBar, Context context) {
+-        boolean mAppType;
++    public static List<PackageItems> getData(String searchTxt, Context context) {
+         List<PackageItems> mData = new ArrayList<>();
+-        if (progressBar != null) {
+-            if (progressBar.isIndeterminate()) {
+-                progressBar.setIndeterminate(false);
+-            }
+-            progressBar.setMax(getRawData().size());
+-        }
+-        for (PackageItems item : getRawData()) {
+-            if (sCommonUtils.getString("appTypes", "all", context).equals("system")) {
+-                mAppType = (sPackageUtils.isSystemApp(item.getPackageName(), context));
+-            } else if (sCommonUtils.getString("appTypes", "all", context).equals("user")) {
+-                mAppType = (!sPackageUtils.isSystemApp(item.getPackageName(), context));
+-            } else {
+-                mAppType = true;
+-            }
+-            if (mAppType && item.getPackageName().contains(".")) {
+-                if (searchTxt == null || (isTextMatched(item.getAppName(), searchTxt)
+-                        || isTextMatched(item.getPackageName(), searchTxt))) {
+-                    mData.add(item);
++        if (getRawData() != null) {
++            boolean mAppType;
++            for (PackageItems item : getRawData()) {
++                if (sCommonUtils.getString("appTypes", "all", context).equals("system")) {
++                    mAppType = (sPackageUtils.isSystemApp(item.getPackageName(), context));
++                } else if (sCommonUtils.getString("appTypes", "all", context).equals("user")) {
++                    mAppType = (!sPackageUtils.isSystemApp(item.getPackageName(), context));
++                } else {
++                    mAppType = true;
+                 }
+-            }
+-            if (PackageData.getSortingType(context) == 0) {
+-                mData.sort((lhs, rhs) -> String.CASE_INSENSITIVE_ORDER.compare(lhs.getAppName(), rhs.getAppName()));
+-            } else if (PackageData.getSortingType(context) == 4) {
+-                mData.sort(Comparator.comparingLong(PackageItems::getAPKSize));
+-            } else if (PackageData.getSortingType(context) == 2) {
+-                mData.sort(Comparator.comparingLong(PackageItems::getInstalledTime));
+-            } else if (PackageData.getSortingType(context) == 3) {
+-                mData.sort(Comparator.comparingLong(PackageItems::getUpdatedTime));
+-            } else {
+-                mData.sort((lhs, rhs) -> String.CASE_INSENSITIVE_ORDER.compare(lhs.getPackageName(), rhs.getPackageName()));
+-            }
+-            if (progressBar != null) {
+-                if (progressBar.getProgress() < getRawData().size()) {
+-                    progressBar.setProgress(progressBar.getProgress() + 1);
++                if (mAppType && item.getPackageName().contains(".")) {
++                    if (searchTxt == null || (isTextMatched(item.getAppName(), searchTxt)
++                            || isTextMatched(item.getPackageName(), searchTxt))) {
++                        mData.add(item);
++                    }
++                }
++                if (PackageData.getSortingType(context) == 0) {
++                    mData.sort((lhs, rhs) -> String.CASE_INSENSITIVE_ORDER.compare(lhs.getAppName(), rhs.getAppName()));
++                } else if (PackageData.getSortingType(context) == 4) {
++                    mData.sort(Comparator.comparingLong(PackageItems::getAPKSize));
++                } else if (PackageData.getSortingType(context) == 2) {
++                    mData.sort(Comparator.comparingLong(PackageItems::getInstalledTime));
++                } else if (PackageData.getSortingType(context) == 3) {
++                    mData.sort(Comparator.comparingLong(PackageItems::getUpdatedTime));
+                 } else {
+-                    progressBar.setProgress(0);
++                    mData.sort((lhs, rhs) -> String.CASE_INSENSITIVE_ORDER.compare(lhs.getPackageName(), rhs.getPackageName()));
+                 }
+             }
+-        }
+-        if (sCommonUtils.getBoolean("reverse_order", false, context)) {
+-            Collections.reverse(mData);
++            if (sCommonUtils.getBoolean("reverse_order", false, context)) {
++                Collections.reverse(mData);
++            }
+         }
+         return mData;
+     }
+
+commit 8fba2544ba4759afd39f69346cd2669c59cd29ad
+Author: sunilpaulmathew <sunil.kde@gmail.com>
+Date:   Mon Sep 15 17:03:30 2025 +0200
+
+    Main: Remove dependency on Common class; add proper Intent callbacks, update libraries, and improve batch options
+    
+    * Replaced Common class usage with proper Intent callbacks
+    * Updated aXML and sCommon libraries
+    * Improved batch options handling
+    * Various other minor improvements and cleanup
+    
+    Signed-off-by: sunilpaulmathew <sunil.kde@gmail.com>
+
+diff --git a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+index 0819b63..976b962 100644
+--- a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
++++ b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+@@ -24,6 +24,7 @@ import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.Comparator;
+ import java.util.List;
++import java.util.Objects;
+ 
+ import in.sunilpaulmathew.sCommon.CommonUtils.sCommonUtils;
+ import in.sunilpaulmathew.sCommon.FileUtils.sFileUtils;
+@@ -36,6 +37,15 @@ public class PackageData {
+ 
+     private static List<PackageItems> mRawData = null;
+ 
++    public static boolean isTextMatched(String text, String searchText) {
++        for (int a = 0; a < text.length() - searchText.length() + 1; a++) {
++            if (searchText.equalsIgnoreCase(text.substring(a, a + searchText.length()))) {
++                return true;
++            }
++        }
++        return false;
++    }
++
+     public static int getSortingType(Context context) {
+         return sCommonUtils.getInt("sort_apps", 0, context);
+     }
+@@ -67,7 +77,9 @@ public class PackageData {
+             mRawData.add(new PackageItems(
+                     packageInfo.packageName,
+                     getAppName(packageInfo.packageName, context),
+-                    new File(sPackageUtils.getSourceDir(packageInfo.packageName, context)).length(), context)
++                    new File(sPackageUtils.getSourceDir(packageInfo.packageName, context)).length(),
++                    Objects.requireNonNull(getPackageInfo(packageInfo.packageName, context)).firstInstallTime,
++                    Objects.requireNonNull(getPackageInfo(packageInfo.packageName, context)).lastUpdateTime)
+             );
+             if (progressBar != null) {
+                 if (progressBar.getProgress() < packages.size()) {
+@@ -80,7 +92,7 @@ public class PackageData {
+         return mRawData;
+     }
+ 
+-    public static List<PackageItems> getData(ProgressBar progressBar, Context context) {
++    public static List<PackageItems> getData(String searchTxt, ProgressBar progressBar, Context context) {
+         boolean mAppType;
+         List<PackageItems> mData = new ArrayList<>();
+         if (progressBar != null) {
+@@ -98,8 +110,8 @@ public class PackageData {
+                 mAppType = true;
+             }
+             if (mAppType && item.getPackageName().contains(".")) {
+-                if (Common.getSearchText() == null || (Common.isTextMatched(item.getAppName())
+-                        || Common.isTextMatched(item.getPackageName()))) {
++                if (searchTxt == null || (isTextMatched(item.getAppName(), searchTxt)
++                        || isTextMatched(item.getPackageName(), searchTxt))) {
+                     mData.add(item);
+                 }
+             }
+
+commit 4787a91a4c11ef96fe5f2cc5cf5cbcbb473b5f8b
+Author: sunilpaulmathew <sunil.kde@gmail.com>
+Date:   Sat Sep 13 13:42:35 2025 +0200
+
+    Improved batch options dialog, show better progress, etc.
+    
+    Signed-off-by: sunilpaulmathew <sunil.kde@gmail.com>
+
+diff --git a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+index 8b8421a..0819b63 100644
+--- a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
++++ b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+@@ -57,6 +57,12 @@ public class PackageData {
+     private static List<PackageItems> getRawData(ProgressBar progressBar, Context context) {
+         List<PackageItems> mRawData = new ArrayList<>();
+         List<ApplicationInfo> packages = context.getPackageManager().getInstalledApplications(PackageManager.GET_META_DATA);
++        if (progressBar != null) {
++            if (progressBar.isIndeterminate()) {
++                progressBar.setIndeterminate(false);
++            }
++            progressBar.setMax(packages.size());
++        }
+         for (ApplicationInfo packageInfo: packages) {
+             mRawData.add(new PackageItems(
+                     packageInfo.packageName,
+@@ -64,10 +70,6 @@ public class PackageData {
+                     new File(sPackageUtils.getSourceDir(packageInfo.packageName, context)).length(), context)
+             );
+             if (progressBar != null) {
+-                if (progressBar.isIndeterminate()) {
+-                    progressBar.setIndeterminate(false);
+-                }
+-                progressBar.setMax(packages.size());
+                 if (progressBar.getProgress() < packages.size()) {
+                     progressBar.setProgress(progressBar.getProgress() + 1);
+                 } else {
+@@ -78,9 +80,15 @@ public class PackageData {
+         return mRawData;
+     }
+ 
+-    public static List<PackageItems> getData(Context context) {
++    public static List<PackageItems> getData(ProgressBar progressBar, Context context) {
+         boolean mAppType;
+         List<PackageItems> mData = new ArrayList<>();
++        if (progressBar != null) {
++            if (progressBar.isIndeterminate()) {
++                progressBar.setIndeterminate(false);
++            }
++            progressBar.setMax(getRawData().size());
++        }
+         for (PackageItems item : getRawData()) {
+             if (sCommonUtils.getString("appTypes", "all", context).equals("system")) {
+                 mAppType = (sPackageUtils.isSystemApp(item.getPackageName(), context));
+@@ -106,6 +114,13 @@ public class PackageData {
+             } else {
+                 mData.sort((lhs, rhs) -> String.CASE_INSENSITIVE_ORDER.compare(lhs.getPackageName(), rhs.getPackageName()));
+             }
++            if (progressBar != null) {
++                if (progressBar.getProgress() < getRawData().size()) {
++                    progressBar.setProgress(progressBar.getProgress() + 1);
++                } else {
++                    progressBar.setProgress(0);
++                }
++            }
+         }
+         if (sCommonUtils.getBoolean("reverse_order", false, context)) {
+             Collections.reverse(mData);
+
+commit 4c4edd6652757d9d17a88171c9aa60c6766d62c3
+Author: sunilpaulmathew <sunil.kde@gmail.com>
+Date:   Sun Aug 17 01:56:52 2025 +0200
+
+    Major app overhaul with modernized UI and improved functionality
+    
+    - Redesigned UI for a more modern app experience
+    - Removed in-app purchases from Play flavor (a separate paid Pro version will be introduced later)
+    - Exports (APKs, icons, text files, etc.) now go to the Downloads folder > Package Manager
+    - App now works with minimum required permissions
+    - Users can now open apps directly from the main UI
+    - Improved and significantly faster batch operations in the main UI (long-press to access)
+    - Added batch options for:
+     - Split APKs
+     - Uninstalled apps
+     - Exported apps
+    - Simplified Manifest page and text-based views
+    - Updated to target the latest Android version
+    - Major internal cleanup and code refactoring
+    - Numerous under-the-hood improvements and optimizations
+    
+    Signed-off-by: sunilpaulmathew <sunil.kde@gmail.com>
+
+diff --git a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+index e835070..8b8421a 100644
+--- a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
++++ b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+@@ -17,13 +17,13 @@ import android.os.Environment;
+ import android.widget.ProgressBar;
+ 
+ import com.smartpack.packagemanager.R;
++import com.smartpack.packagemanager.utils.SerializableItems.PackageItems;
+ 
+ import java.io.File;
+ import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.Comparator;
+ import java.util.List;
+-import java.util.Objects;
+ 
+ import in.sunilpaulmathew.sCommon.CommonUtils.sCommonUtils;
+ import in.sunilpaulmathew.sCommon.FileUtils.sFileUtils;
+@@ -41,10 +41,17 @@ public class PackageData {
+     }
+ 
+     public static void makePackageFolder(Context context) {
+-        if (getPackageDir(context).exists() && getPackageDir(context).isFile()) {
+-            sFileUtils.delete(getPackageDir(context));
++        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
++            if (getPackageDir(context).exists() && getPackageDir(context).isFile()) {
++                sFileUtils.delete(getPackageDir(context));
++            }
++            sFileUtils.mkdir(getPackageDir(context));
++        } else {
++            if (!getPackageDir(context).exists()) {
++                sFileUtils.mkdir(getPackageDir(context));
++            }
+         }
+-        sFileUtils.mkdir(getPackageDir(context));
++
+     }
+ 
+     private static List<PackageItems> getRawData(ProgressBar progressBar, Context context) {
+@@ -54,10 +61,7 @@ public class PackageData {
+             mRawData.add(new PackageItems(
+                     packageInfo.packageName,
+                     getAppName(packageInfo.packageName, context),
+-                    sPackageUtils.getAppIcon(packageInfo.packageName, context),
+-                    new File(sPackageUtils.getSourceDir(packageInfo.packageName, context)).length(),
+-                    Objects.requireNonNull(getPackageInfo(packageInfo.packageName, context)).firstInstallTime,
+-                    Objects.requireNonNull(getPackageInfo(packageInfo.packageName, context)).lastUpdateTime)
++                    new File(sPackageUtils.getSourceDir(packageInfo.packageName, context)).length(), context)
+             );
+             if (progressBar != null) {
+                 if (progressBar.isIndeterminate()) {
+@@ -86,10 +90,8 @@ public class PackageData {
+                 mAppType = true;
+             }
+             if (mAppType && item.getPackageName().contains(".")) {
+-                if (Common.getSearchText() == null) {
+-                    mData.add(item);
+-                } else if (Common.isTextMatched(item.getAppName())
+-                        || Common.isTextMatched(item.getPackageName())) {
++                if (Common.getSearchText() == null || (Common.isTextMatched(item.getAppName())
++                        || Common.isTextMatched(item.getPackageName()))) {
+                     mData.add(item);
+                 }
+             }
+@@ -132,8 +134,9 @@ public class PackageData {
+     }
+ 
+     public static File getPackageDir(Context context) {
+-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Utils.isPermissionDenied()) {
+-            return context.getExternalFilesDir("");
++        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
++            return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
++                    context.getString(R.string.app_name));
+         } else {
+             return new File(Environment.getExternalStorageDirectory(), "Package_Manager");
+         }
+@@ -160,15 +163,6 @@ public class PackageData {
+         }
+     }
+ 
+-    public static String showBatchList() {
+-        StringBuilder sb = new StringBuilder();
+-        for (String s : Common.getBatchList()) {
+-            if (s != null && !s.isEmpty())
+-                sb.append(" - ").append(s.replaceAll(","," ")).append("\n");
+-        }
+-        return "\n" + sb;
+-    }
+-
+     public static List<PackageItems> getRawData() {
+         return mRawData;
+     }
+
+commit f85ffdd43f81114ac5e804a1d73618e97a02f935
+Author: sunilpaulmathew <sunil.kde@gmail.com>
+Date:   Fri Oct 25 11:27:31 2024 +0200
+
+    Removed deprecated code as much as possible
+    + code cleaning
+    
+    Signed-off-by: sunilpaulmathew <sunil.kde@gmail.com>
+
+diff --git a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+index 1a83a5f..e835070 100644
+--- a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
++++ b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+@@ -94,15 +94,15 @@ public class PackageData {
+                 }
+             }
+             if (PackageData.getSortingType(context) == 0) {
+-                Collections.sort(mData, (lhs, rhs) -> String.CASE_INSENSITIVE_ORDER.compare(lhs.getAppName(), rhs.getAppName()));
+-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && PackageData.getSortingType(context) == 4) {
+-                Collections.sort(mData, Comparator.comparingLong(PackageItems::getAPKSize));
+-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && PackageData.getSortingType(context) == 2) {
+-                Collections.sort(mData, Comparator.comparingLong(PackageItems::getInstalledTime));
+-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && PackageData.getSortingType(context) == 3) {
+-                Collections.sort(mData, Comparator.comparingLong(PackageItems::getUpdatedTime));
++                mData.sort((lhs, rhs) -> String.CASE_INSENSITIVE_ORDER.compare(lhs.getAppName(), rhs.getAppName()));
++            } else if (PackageData.getSortingType(context) == 4) {
++                mData.sort(Comparator.comparingLong(PackageItems::getAPKSize));
++            } else if (PackageData.getSortingType(context) == 2) {
++                mData.sort(Comparator.comparingLong(PackageItems::getInstalledTime));
++            } else if (PackageData.getSortingType(context) == 3) {
++                mData.sort(Comparator.comparingLong(PackageItems::getUpdatedTime));
+             } else {
+-                Collections.sort(mData, (lhs, rhs) -> String.CASE_INSENSITIVE_ORDER.compare(lhs.getPackageName(), rhs.getPackageName()));
++                mData.sort((lhs, rhs) -> String.CASE_INSENSITIVE_ORDER.compare(lhs.getPackageName(), rhs.getPackageName()));
+             }
+         }
+         if (sCommonUtils.getBoolean("reverse_order", false, context)) {
+
+commit 7e4745dd82a1841d707716f9318e45233d53824a
+Author: sunilpaulmathew <sunil.kde@gmail.com>
+Date:   Wed Mar 29 22:27:35 2023 +0200
+
+    Simplified package sorting
+    
+    Signed-off-by: sunilpaulmathew <sunil.kde@gmail.com>
+
+diff --git a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+index e380bfd..1a83a5f 100644
+--- a/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
++++ b/app/src/main/java/com/smartpack/packagemanager/utils/PackageData.java
+@@ -36,6 +36,10 @@ public class PackageData {
+ 
+     private static List<PackageItems> mRawData = null;
+ 
++    public static int getSortingType(Context context) {
++        return sCommonUtils.getInt("sort_apps", 0, context);
++    }
++
+     public static void makePackageFolder(Context context) {
+         if (getPackageDir(context).exists() && getPackageDir(context).isFile()) {
+             sFileUtils.delete(getPackageDir(context));
+@@ -89,13 +93,13 @@ public class PackageData {
+                     mData.add(item);
+                 }
+             }
+-            if (sCommonUtils.getBoolean("sort_name", false, context)) {
++            if (PackageData.getSortingType(context) == 0) {
+                 Collections.sort(mData, (lhs, rhs) -> String.CASE_INSENSITIVE_ORDER.compare(lhs.getAppName(), rhs.getAppName()));
+-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && sCommonUtils.getBoolean("sort_size", false, context)) {
++            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && PackageData.getSortingType(context) == 4) {
+                 Collections.sort(mData, Comparator.comparingLong(PackageItems::getAPKSize));
+-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && sCommonUtils.getBoolean("sort_installed", false, context)) {
++            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && PackageData.getSortingType(context) == 2) {
+                 Collections.sort(mData, Comparator.comparingLong(PackageItems::getInstalledTime));
+-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && sCommonUtils.getBoolean("sort_updated", false, context)) {
++            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && PackageData.getSortingType(context) == 3) {
+                 Collections.sort(mData, Comparator.comparingLong(PackageItems::getUpdatedTime));
+             } else {
+                 Collections.sort(mData, (lhs, rhs) -> String.CASE_INSENSITIVE_ORDER.compare(lhs.getPackageName(), rhs.getPackageName()));
+@@ -173,4 +177,8 @@ public class PackageData {
+         mRawData = getRawData(progressBar, context);
+     }
+ 
++    public static void setSortingType(int value, Context context) {
++        sCommonUtils.saveInt("sort_apps", value, context);
++    }
++
+ }
+\ No newline at end of file

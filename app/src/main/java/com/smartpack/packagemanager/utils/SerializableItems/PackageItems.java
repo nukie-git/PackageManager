@@ -18,6 +18,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.widget.ImageView;
 
+import androidx.annotation.Nullable;
+
 import java.io.File;
 import java.io.Serializable;
 import java.util.Objects;
@@ -30,17 +32,83 @@ import java.util.concurrent.Executors;
 public class PackageItems implements Serializable {
 
     private boolean mSystemApp, mUpdatedSystemApp, mUserApp;
-    private Drawable mAppIcon;
+    private transient Drawable mAppIcon;
     private final boolean removed;
     private final String mPackageName, mAppName, mAPKPath;
-    private final Context mContext;
+    private final long mInstalledTime, mUpdatedTime;
+    
+    private static final ExecutorService iconExecutor = Executors.newFixedThreadPool(Math.max(1, Runtime.getRuntime().availableProcessors()));
 
+    public PackageItems(String packageName, String appName, String apkPath, boolean removed, @Nullable PackageInfo pi) {
+        this.mPackageName = packageName;
+        this.mAppName = appName;
+        this.mAPKPath = apkPath;
+        this.removed = removed;
+        
+        if (pi != null) {
+            this.mInstalledTime = pi.firstInstallTime;
+            this.mUpdatedTime = pi.lastUpdateTime;
+            ApplicationInfo ai = pi.applicationInfo;
+            if (ai != null) {
+                mSystemApp = (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+                mUpdatedSystemApp = (ai.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
+                mUserApp = !mSystemApp && !mUpdatedSystemApp;
+            } else {
+                mSystemApp = false;
+                mUpdatedSystemApp = false;
+                mUserApp = !removed;
+            }
+        } else {
+            this.mInstalledTime = 0;
+            this.mUpdatedTime = 0;
+            mSystemApp = false;
+            mUpdatedSystemApp = false;
+            mUserApp = !removed;
+        }
+    }
+
+    // Deprecated constructor, use the one with PackageInfo for better performance
     public PackageItems(String packageName, String appName, String apkPath, boolean removed, Context context) {
         this.mPackageName = packageName;
         this.mAppName = appName;
         this.mAPKPath = apkPath;
         this.removed = removed;
-        this.mContext = context;
+
+        long installed = 0, updated = 0;
+        try {
+            PackageManager pm = context.getPackageManager();
+            PackageInfo pi = null;
+            if (!removed) {
+                pi = pm.getPackageInfo(packageName, 0);
+            } else if (apkPath != null && !apkPath.isEmpty()) {
+                pi = pm.getPackageArchiveInfo(apkPath, 0);
+            }
+            
+            if (pi != null) {
+                installed = pi.firstInstallTime;
+                updated = pi.lastUpdateTime;
+                ApplicationInfo ai = pi.applicationInfo;
+                if (ai != null) {
+                    mSystemApp = (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+                    mUpdatedSystemApp = (ai.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
+                    mUserApp = !mSystemApp && !mUpdatedSystemApp;
+                } else {
+                    mSystemApp = false;
+                    mUpdatedSystemApp = false;
+                    mUserApp = !removed;
+                }
+            } else {
+                mSystemApp = false;
+                mUpdatedSystemApp = false;
+                mUserApp = !removed;
+            }
+        } catch (Exception e) {
+            mSystemApp = false;
+            mUpdatedSystemApp = false;
+            mUserApp = !removed;
+        }
+        this.mInstalledTime = installed;
+        this.mUpdatedTime = updated;
     }
 
     public boolean isRemoved() {
@@ -55,8 +123,8 @@ public class PackageItems implements Serializable {
         return mUserApp;
     }
 
-    public Intent launchIntent() {
-        return mContext.getPackageManager().getLaunchIntentForPackage(mPackageName);
+    public Intent launchIntent(Context context) {
+        return context.getPackageManager().getLaunchIntentForPackage(mPackageName);
     }
 
     public String getSourceDir() {
@@ -72,57 +140,62 @@ public class PackageItems implements Serializable {
     }
 
     public long getAPKSize() {
+        if (mAPKPath == null || mAPKPath.isEmpty()) {
+            return 0L;
+        }
         return new File(mAPKPath).length();
     }
 
     public long getInstalledTime() {
-        return Objects.requireNonNull(getPackageInfo(getPackageName(), mContext)).firstInstallTime;
+        return mInstalledTime;
     }
 
     public long getUpdatedTime() {
-        return Objects.requireNonNull(getPackageInfo(getPackageName(), mContext)).lastUpdateTime;
+        return mUpdatedTime;
+    }
+    
+    @Deprecated
+    public long getInstalledTime(Context context) {
+        return mInstalledTime;
     }
 
-    private static PackageInfo getPackageInfo(String packageName, Context context) {
-        try {
-            return context.getPackageManager().getPackageInfo(packageName, PackageManager.GET_PERMISSIONS);
-        } catch (Exception ignored) {
-        }
-        return null;
+    @Deprecated
+    public long getUpdatedTime(Context context) {
+        return mUpdatedTime;
     }
 
     public void loadAppIcon(ImageView view) {
-        try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
-            Handler handler = new Handler(Looper.getMainLooper());
-            executor.execute(() -> {
-
-                PackageManager pm = view.getContext().getPackageManager();
-                ApplicationInfo ai = null;
-
-                try {
-                    if (!removed) {
-                        ai = pm.getApplicationInfo(mPackageName, 0);
-                    } else {
-                        PackageInfo pi = pm.getPackageArchiveInfo(mAPKPath, 0);
-                        if (pi != null) {
-                            ai = pi.applicationInfo;
-                            Objects.requireNonNull(ai).sourceDir = mAPKPath;
-                            ai.publicSourceDir = mAPKPath;
-                        }
+        if (mAppIcon != null) {
+            view.setImageDrawable(mAppIcon);
+            return;
+        }
+        iconExecutor.execute(() -> {
+            PackageManager pm = view.getContext().getPackageManager();
+            ApplicationInfo ai = null;
+            try {
+                if (!removed) {
+                    ai = pm.getApplicationInfo(mPackageName, 0);
+                } else if (mAPKPath != null && !mAPKPath.isEmpty()) {
+                    PackageInfo pi = pm.getPackageArchiveInfo(mAPKPath, 0);
+                    if (pi != null) {
+                        ai = pi.applicationInfo;
+                        Objects.requireNonNull(ai).sourceDir = mAPKPath;
+                        ai.publicSourceDir = mAPKPath;
                     }
-
-                    if (ai != null) {
-                        mAppIcon = pm.getApplicationIcon(ai);
-                        mSystemApp = (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-                        mUpdatedSystemApp = (ai.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
-                        mUserApp = !mSystemApp && !mUpdatedSystemApp;
-                    }
-                } catch (PackageManager.NameNotFoundException ignored) {
                 }
 
-                handler.post(() -> view.setImageDrawable(mAppIcon));
+                if (ai != null) {
+                    mAppIcon = pm.getApplicationIcon(ai);
+                }
+            } catch (Exception ignored) {
+            }
+
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (mAppIcon != null) {
+                    view.setImageDrawable(mAppIcon);
+                }
             });
-        }
+        });
     }
 
 }

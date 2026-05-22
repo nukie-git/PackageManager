@@ -9,6 +9,8 @@
 package com.smartpack.packagemanager.dialogs;
 
 import android.app.Activity;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
@@ -23,6 +25,7 @@ import com.smartpack.packagemanager.R;
 import com.smartpack.packagemanager.adapters.BatchOptionsAdapter;
 import com.smartpack.packagemanager.utils.SerializableItems.BatchOptionsItems;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -37,7 +40,11 @@ public abstract class BatchOptionsDialog extends MaterialAlertDialogBuilder {
 
     private List<BatchOptionsItems> mBatchOptionsItems;
 
-    public BatchOptionsDialog(String title, String actionTitle, List<String> packageNames, Activity activity) {
+    public BatchOptionsDialog(String title, String actionTitle, List<String> items, Activity activity) {
+        this(title, actionTitle, items, activity, false);
+    }
+
+    public BatchOptionsDialog(String title, String actionTitle, List<String> items, Activity activity, boolean isPaths) {
         super(activity);
         View rootView = View.inflate(activity, R.layout.layout_batch_options, null);
         RecyclerView recyclerView = rootView.findViewById(R.id.recycler_view);
@@ -50,9 +57,13 @@ public abstract class BatchOptionsDialog extends MaterialAlertDialogBuilder {
             Handler handler = new Handler(Looper.getMainLooper());
 
             executor.execute(() -> {
-                BatchOptionsAdapter adapter = new BatchOptionsAdapter(getData(packageNames, activity));
+                List<BatchOptionsItems> data = getData(items, activity, isPaths);
+                BatchOptionsAdapter adapter = new BatchOptionsAdapter(data);
 
-                handler.post(() -> recyclerView.setAdapter(adapter));
+                handler.post(() -> {
+                    recyclerView.setAdapter(adapter);
+                    recyclerView.setVisibility(View.VISIBLE);
+                });
             });
         }
 
@@ -64,11 +75,31 @@ public abstract class BatchOptionsDialog extends MaterialAlertDialogBuilder {
         show();
     }
 
-    private List<BatchOptionsItems> getData(List<String> packageNames, Activity activity) {
+    private List<BatchOptionsItems> getData(List<String> items, Activity activity, boolean isPaths) {
         mBatchOptionsItems = new ArrayList<>();
-        for (String packageID : packageNames) {
-            if (packageID.contains(".") && sPackageUtils.isPackageInstalled(packageID, activity)) {
-                mBatchOptionsItems.add(new BatchOptionsItems(sPackageUtils.getAppName(packageID, activity), packageID, sPackageUtils.getAppIcon(packageID, activity), true, Integer.MIN_VALUE));
+        if (!isPaths) {
+            for (String packageID : items) {
+                if (packageID.contains(".") && sPackageUtils.isPackageInstalled(packageID, activity)) {
+                    mBatchOptionsItems.add(new BatchOptionsItems(sPackageUtils.getAppName(packageID, activity), packageID, sPackageUtils.getAppIcon(packageID, activity), true, Integer.MIN_VALUE));
+                }
+            }
+        } else {
+            PackageManager pm = activity.getPackageManager();
+            for (String path : items) {
+                File file = new File(path);
+                if (file.exists()) {
+                    PackageInfo pi = pm.getPackageArchiveInfo(path, 0);
+                    if (pi != null) {
+                        if (pi.applicationInfo != null) {
+                            pi.applicationInfo.sourceDir = path;
+                            pi.applicationInfo.publicSourceDir = path;
+                        }
+                        CharSequence label = pm.getApplicationLabel(pi.applicationInfo);
+                        mBatchOptionsItems.add(new BatchOptionsItems(label, path, pm.getApplicationIcon(pi.applicationInfo), true, Integer.MIN_VALUE));
+                    } else {
+                        mBatchOptionsItems.add(new BatchOptionsItems(file.getName(), path, activity.getDrawable(R.mipmap.ic_launcher), true, Integer.MIN_VALUE));
+                    }
+                }
             }
         }
         return mBatchOptionsItems;

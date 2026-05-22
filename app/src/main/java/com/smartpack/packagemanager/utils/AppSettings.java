@@ -30,12 +30,60 @@ import in.sunilpaulmathew.sCommon.Dialog.sSingleChoiceDialog;
  */
 public class AppSettings {
 
+    public static final String PREF_APP_THEME = "pref_app_theme";
+
+    // -----------------------------------------------------------------------
+    // Export-name mode helpers (patch: ExportNameBuilder integration)
+    // -----------------------------------------------------------------------
+
+    /** Preference key for the naming mode.
+     *  Values: "package_id" | "app_name" | "app_package_version" | "custom_template" */
+    public static final String PREF_EXPORT_MODE = "export_name_mode";
+    /** Preference key for the separator character used between template tokens. Default: "-" */
+    public static final String PREF_EXPORT_SEP  = "export_name_separator";
+    /** Preference key for the custom template string.
+     *  Supported tokens: {appname} {packageid} {versionname} {versioncode} {date}
+     *  Default: "{appname}-{packageid}-{versionname}" */
+    public static final String PREF_EXPORT_TPL  = "export_name_template";
+
+    public static ExportNameBuilder.Mode getExportMode(Context context) {
+        String raw = sCommonUtils.getString(PREF_EXPORT_MODE,
+                ExportNameBuilder.Mode.PACKAGE_NAME.name(), context);
+        try {
+            return ExportNameBuilder.Mode.valueOf(raw);
+        } catch (IllegalArgumentException ignored) {
+            return ExportNameBuilder.Mode.PACKAGE_NAME;
+        }
+    }
+
+    public static String getExportSeparator(Context context) {
+        return sCommonUtils.getString(PREF_EXPORT_SEP, "-", context);
+    }
+
+    public static String getExportTemplate(Context context) {
+        return sCommonUtils.getString(PREF_EXPORT_TPL, "{appname}-{packageid}-{versionname}", context);
+    }
+
+    public static String getExportedAPKNameSummary(Activity activity) {
+        switch (getExportMode(activity)) {
+            case APP_NAME:            return activity.getString(R.string.name);
+            case APP_PACKAGE_VERSION: return activity.getString(R.string.export_name_mode_app_pkg_ver);
+            case CUSTOM_TEMPLATE:     return activity.getString(R.string.export_name_mode_custom);
+            case PACKAGE_NAME:
+            default:                  return activity.getString(R.string.package_id);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+
+
     public static int getAPKNameOptionsPosition(Context context) {
-        if (sCommonUtils.getString("exportedAPKName", context.getString(R.string.package_id), context)
-                .equals(context.getString(R.string.name))) {
-            return 1;
-        } else {
-            return 0;
+        switch (getExportMode(context)) {
+            case APP_NAME:            return 1;
+            case APP_PACKAGE_VERSION: return 2;
+            case CUSTOM_TEMPLATE:     return 3;
+            case PACKAGE_NAME:
+            default:                  return 0;
         }
     }
 
@@ -143,7 +191,7 @@ public class AppSettings {
     }
 
     public static String getExportedAPKName(Activity activity) {
-        return sCommonUtils.getString("exportedAPKName", activity.getString(R.string.package_id), activity);
+        return getExportedAPKNameSummary(activity);
     }
 
     public static String getExitingStatus(Activity activity) {
@@ -165,7 +213,9 @@ public class AppSettings {
     public static String[] getAPKNameOptionsMenu(Context context) {
         return new String[] {
                 context.getString(R.string.package_id),
-                context.getString(R.string.name)
+                context.getString(R.string.name),
+                context.getString(R.string.export_name_mode_app_pkg_ver),
+                context.getString(R.string.export_name_mode_custom)
         };
     }
 

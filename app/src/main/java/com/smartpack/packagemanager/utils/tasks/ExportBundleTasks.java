@@ -70,8 +70,7 @@ public class ExportBundleTasks extends sExecutor {
             mFiles.add(new File(mAPKPath, splitApps));
         }
         PackageData.makePackageFolder(mActivity);
-        try (ZipFileUtils zipFileUtils = new ZipFileUtils(PackageData.getPackageDir(mActivity) + "/" + mName + "_" + sAPKUtils.getVersionCode(
-                sPackageUtils.getSourceDir(mPackageName, mActivity), mActivity) + ".apkm")) {
+        try (ZipFileUtils zipFileUtils = new ZipFileUtils(PackageData.getPackageDir(mActivity) + "/" + mName + ".apkm")) {
             zipFileUtils.setProgress(mProgressDialog);
             zipFileUtils.zip(mFiles);
         } catch (IOException ignored) {}
@@ -89,8 +88,7 @@ public class ExportBundleTasks extends sExecutor {
                 })
                 .setPositiveButton(mActivity.getString(R.string.share), (dialog, id) -> {
                     Uri uriFile = FileProvider.getUriForFile(mActivity,
-                            BuildConfig.APPLICATION_ID + ".provider", new File(PackageData.getPackageDir(mActivity) + "/" + mName + "_" +
-                                    sAPKUtils.getVersionCode(sPackageUtils.getSourceDir(mPackageName, mActivity), mActivity) + ".apkm"));
+                            BuildConfig.APPLICATION_ID + ".provider", new File(PackageData.getPackageDir(mActivity) + "/" + mName + ".apkm"));
                     Intent shareScript = new Intent(Intent.ACTION_SEND);
                     shareScript.setType("application/zip");
                     shareScript.putExtra(Intent.EXTRA_SUBJECT, mActivity.getString(R.string.shared_by, mName));

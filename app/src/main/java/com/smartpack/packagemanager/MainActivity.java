@@ -39,6 +39,7 @@ import java.util.Objects;
 import in.sunilpaulmathew.sCommon.CommonUtils.sCommonUtils;
 import in.sunilpaulmathew.sCommon.CrashReporter.sCrashReporter;
 import in.sunilpaulmathew.sCommon.ThemeUtils.sThemeUtils;
+import com.smartpack.packagemanager.utils.ThemeHelper;
 
 /*
  * Created by sunilpaulmathew <sunil.kde@gmail.com> on February 11, 2020
@@ -49,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        ThemeHelper.applyTheme(this);
         super.onCreate(savedInstanceState);
         // Set App Language
         sThemeUtils.setLanguage(this);

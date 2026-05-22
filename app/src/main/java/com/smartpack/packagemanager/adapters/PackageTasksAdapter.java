@@ -107,7 +107,7 @@ public class PackageTasksAdapter extends RecyclerView.Adapter<PackageTasksAdapte
                 holder.appName.setTypeface(null, Typeface.BOLD);
             }
 
-            if (data.get(position).launchIntent() != null) {
+            if (data.get(position).launchIntent(holder.appID.getContext()) != null) {
                 holder.open.setVisibility(View.VISIBLE);
             } else {
                 holder.open.setVisibility(View.GONE);
@@ -210,7 +210,7 @@ public class PackageTasksAdapter extends RecyclerView.Adapter<PackageTasksAdapte
             details.putExtra(PackageDetailsActivity.APP_NAME_INTENT, packageItems.getAppName());
             details.putExtra(PackageDetailsActivity.PACKAGE_NAME_INTENT, packageItems.getPackageName());
             details.putExtra(PackageDetailsActivity.SYSTEM_APP, packageItems.isSystemApp());
-            details.putExtra(PackageDetailsActivity.LAUNCHER_INTENT, packageItems.launchIntent() != null);
+            details.putExtra(PackageDetailsActivity.LAUNCHER_INTENT, packageItems.launchIntent(view.getContext()) != null);
             details.putExtra(PackageDetailsActivity.APK_PICKED, false);
             uninstallApps.launch(details);
         }

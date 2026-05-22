@@ -1,0 +1,111 @@
+diff --git a/app/src/main/java/com/smartpack/packagemanager/utils/AppSettings.java b/app/src/main/java/com/smartpack/packagemanager/utils/AppSettings.java
+index 2c646b3..4be3a30 100644
+--- a/app/src/main/java/com/smartpack/packagemanager/utils/AppSettings.java
++++ b/app/src/main/java/com/smartpack/packagemanager/utils/AppSettings.java
+@@ -30,12 +30,57 @@ import in.sunilpaulmathew.sCommon.Dialog.sSingleChoiceDialog;
+  */
+ public class AppSettings {
+ 
++    // -----------------------------------------------------------------------
++    // Export-name mode helpers (patch: ExportNameBuilder integration)
++    // -----------------------------------------------------------------------
++
++    /** Preference key for the naming mode.
++     *  Values: "package_id" | "app_name" | "app_package_version" | "custom_template" */
++    public static final String PREF_EXPORT_MODE = "export_name_mode";
++    /** Preference key for the separator character used between template tokens. Default: "-" */
++    public static final String PREF_EXPORT_SEP  = "export_name_separator";
++    /** Preference key for the custom template string.
++     *  Supported tokens: {appname} {packageid} {versionname} {versioncode} {date} */
++    public static final String PREF_EXPORT_TPL  = "export_name_template";
++
++    public static ExportNameBuilder.Mode getExportMode(Context context) {
++        String raw = sCommonUtils.getString(PREF_EXPORT_MODE,
++                ExportNameBuilder.Mode.PACKAGE_NAME.name(), context);
++        try {
++            return ExportNameBuilder.Mode.valueOf(raw);
++        } catch (IllegalArgumentException ignored) {
++            return ExportNameBuilder.Mode.PACKAGE_NAME;
++        }
++    }
++
++    public static String getExportSeparator(Context context) {
++        return sCommonUtils.getString(PREF_EXPORT_SEP, "-", context);
++    }
++
++    public static String getExportTemplate(Context context) {
++        return sCommonUtils.getString(PREF_EXPORT_TPL, "{appname}-{versionname}", context);
++    }
++
++    public static String getExportedAPKNameSummary(Activity activity) {
++        switch (getExportMode(activity)) {
++            case APP_NAME:            return activity.getString(R.string.name);
++            case APP_PACKAGE_VERSION: return activity.getString(R.string.export_name_mode_app_pkg_ver);
++            case CUSTOM_TEMPLATE:     return activity.getString(R.string.export_name_mode_custom);
++            case PACKAGE_NAME:
++            default:                  return activity.getString(R.string.package_id);
++        }
++    }
++
++    // -----------------------------------------------------------------------
++
++
+     public static int getAPKNameOptionsPosition(Context context) {
+-        if (sCommonUtils.getString("exportedAPKName", context.getString(R.string.package_id), context)
+-                .equals(context.getString(R.string.name))) {
+-            return 1;
+-        } else {
+-            return 0;
++        switch (getExportMode(context)) {
++            case APP_NAME:            return 1;
++            case APP_PACKAGE_VERSION: return 2;
++            case CUSTOM_TEMPLATE:     return 3;
++            case PACKAGE_NAME:
++            default:                  return 0;
+         }
+     }
+ 
+@@ -143,7 +188,7 @@ public class AppSettings {
+     }
+ 
+     public static String getExportedAPKName(Activity activity) {
+-        return sCommonUtils.getString("exportedAPKName", activity.getString(R.string.package_id), activity);
++        return getExportedAPKNameSummary(activity);
+     }
+ 
+     public static String getExitingStatus(Activity activity) {
+@@ -165,7 +210,9 @@ public class AppSettings {
+     public static String[] getAPKNameOptionsMenu(Context context) {
+         return new String[] {
+                 context.getString(R.string.package_id),
+-                context.getString(R.string.name)
++                context.getString(R.string.name),
++                context.getString(R.string.export_name_mode_app_pkg_ver),
++                context.getString(R.string.export_name_mode_custom)
+         };
+     }
+ 
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index 1c4b0c2..9ad0fae 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -202,4 +202,6 @@
+     <string name="welcome_message">Welcome to Package Manager â€” effortlessly manage your apps with a powerful, intuitive tool.</string>
+     <string name="wrong_extension">Please select a file with %s extension.</string>
+     <string name="yes">Yes</string>
++    <string name="export_name_mode_app_pkg_ver">App Name + Package ID + Version</string>
++    <string name="export_name_mode_custom">Custom Template</string>
+ </resources>
+\ No newline at end of file
+diff --git a/gradle.properties b/gradle.properties
+index 9d54e0f..5b81f33 100644
+--- a/gradle.properties
++++ b/gradle.properties
+@@ -29,4 +29,5 @@ android.dependency.useConstraints=true
+ android.r8.strictFullModeForKeepRules=false
+ android.r8.optimizedResourceShrinking=false
+ android.builtInKotlin=false
+-android.newDsl=false
+\ No newline at end of file
++android.newDsl=false
++org.gradle.java.home=C:/Program Files/Android/Android Studio/jbr

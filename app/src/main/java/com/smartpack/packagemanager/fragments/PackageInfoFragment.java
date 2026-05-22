@@ -109,12 +109,25 @@ public class PackageInfoFragment extends Fragment {
 
         Drawable appIcon = sPackageUtils.getAppIcon(mPackageName, requireActivity());
 
-        mRootOrShizuku = new RootShell().rootAccess() || new ShizukuShell().isReady();
+        // Default to false and check privilege off the main thread to avoid blocking UI
+        mRootOrShizuku = false;
 
         mPackageOptionsAdapter = new PackageOptionsAdapter(getPackageOptionsData());
         mPackageInfoAdapter = new PackageInfoAdapter(getPackageInfoData());
         mPackageOptions.setAdapter(mPackageOptionsAdapter);
         mPackageInfo.setAdapter(mPackageInfoAdapter);
+
+        // Perform root / Shizuku availability check off the main thread and refresh adapters
+        new Thread(() -> {
+            boolean hasRoot = new RootShell().rootAccess();
+            boolean shizReady = new ShizukuShell().isReady();
+            final boolean privilege = hasRoot || shizReady;
+            requireActivity().runOnUiThread(() -> {
+                mRootOrShizuku = privilege;
+                if (mPackageInfoAdapter != null) mPackageInfoAdapter.notifyDataSetChanged();
+                if (mPackageOptionsAdapter != null) mPackageOptionsAdapter.notifyDataSetChanged();
+            });
+        }).start();
 
         mPackageOptionsAdapter.setOnItemClickListener((position, v) -> {
             switch (getPackageOptionsData().get(position).getPosition()) {

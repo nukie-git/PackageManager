@@ -6,6 +6,12 @@ include_in_footer: true
 
 <h2 style="color: blue">🆕 What's New</h2>
 
+### ✨ 74. [7.9](https://play.google.com/store/apps/details?id=com.smartpack.packagemanager.pro) *(May 22, 2026)*
+- Fixed numerous IDE warnings and potential bugs in Settings.
+- Improved naming template and separator logic.
+- Updated dependencies and build tools.
+- Bumped version to 7.9 and removed double 'v' prefix.
+
 ### ✨ 73. [v7.8](https://play.google.com/store/apps/details?id=com.smartpack.packagemanager.pro) *(April 16, 2026)*
 - Enhanced Batch Reset logic.
 - New modern Dashboard UI design.

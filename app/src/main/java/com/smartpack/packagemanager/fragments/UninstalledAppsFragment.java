@@ -185,6 +185,7 @@ public class UninstalledAppsFragment extends Fragment {
                 mSort.setEnabled(mRecycleViewAdapter.getItemCount() >= 5);
                 mBatch.setVisibility(mRestoreList.isEmpty() ? GONE : VISIBLE);
                 mRecyclerView.setAdapter(mRecycleViewAdapter);
+                mRecyclerView.setVisibility(VISIBLE);
                 mProgress.setVisibility(GONE);
             }
         }.execute();
@@ -192,7 +193,7 @@ public class UninstalledAppsFragment extends Fragment {
 
     private List<PackageItems> getData(String searchTxt, Context context) {
         mData = new ArrayList<>();
-        for (PackageItems packageItems : PackageData.getRemovedPackagesData()) {
+        for (PackageItems packageItems : PackageData.getRemovedPackagesData(context)) {
             if (searchTxt == null || packageItems.getPackageName().contains(searchTxt)) {
                 mData.add(packageItems);
             }
@@ -238,7 +239,7 @@ public class UninstalledAppsFragment extends Fragment {
                     }
                     if (packageItems != null) {
                         PackageData.getRemovedPackagesData().remove(packageItems);
-                        PackageData.getRawData().add(new PackageItems(packageItems.getPackageName(), packageItems.getAppName(), packageItems.getSourceDir(), false, context));
+                        PackageData.getRawData().add(new PackageItems(packageItems.getPackageName(), packageItems.getAppName(), packageItems.getSourceDir(), false, (android.content.pm.PackageInfo) null));
                     }
                 }
             }

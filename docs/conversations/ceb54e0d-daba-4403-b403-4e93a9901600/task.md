@@ -1,0 +1,33 @@
+# Modernization Checklist
+
+- [x] **Task 0 — Environment Sanity Check**
+  - [x] Check local.properties configuration
+  - [x] Verify dependencies version catalog syntax (agp = 8.10.1, material = 1.13.0)
+  - [x] Verify settings.gradle is valid
+  - [x] Verify AndroidManifest.xml package and application tags
+  - [x] Confirm theme style inherits from Theme.Material3.DayNight.NoActionBar
+- [x] **Task 1 — Material 3 DayNight theme + Auto/Light/Dark toggle**
+  - [x] Check theme inheritance in styles.xml
+  - [x] Verify settings page toggle UI is bound to ThemeHelper
+  - [x] Verify ThemeHelper dynamically calls AppCompatDelegate
+  - [x] Skip task (Idempotency check satisfied)
+- [x] **Task 2 — ExportNameBuilder integration**
+  - [x] Check ExportNameBuilder.java is complete
+  - [x] Verify export utilities invoke buildExportName
+  - [x] Skip task (Idempotency check satisfied)
+- [x] **Task 3 — Null-safe sorting fix**
+  - [x] Audit sorting comparators in SingleAPKTasks.java
+  - [x] Audit sorting comparators in FilePicker.java
+  - [x] Audit sorting comparators in Downloads.java
+  - [x] Audit sorting comparators in APKPickerActivity.java
+  - [x] Skip task (Idempotency check satisfied)
+- [x] **Task 4 — Permissions editor crash prevention**
+  - [x] Verify try/catch wrapper and lifecycle-check in PackageDetailsActivity and APKPickerActivity
+  - [x] Verify guard checks in PermissionsFragment view creation
+  - [x] Skip task (Idempotency check satisfied)
+- [x] **Task 5 — Gradle wrapper upgrade: 8.11.1 → 8.12**
+  - [x] Confirm gradle-wrapper.properties is already using 8.12
+  - [x] Skip task (Idempotency check satisfied)
+- [x] **Task 6 — Pre-build validation**
+  - [x] Perform dry run of Gradle wrapper check
+  - [x] Generate final summary walkthrough report

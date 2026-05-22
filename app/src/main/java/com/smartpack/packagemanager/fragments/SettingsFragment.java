@@ -21,7 +21,6 @@ import android.widget.LinearLayout;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -29,10 +28,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.textview.MaterialTextView;
 import com.smartpack.packagemanager.BuildConfig;
 import com.smartpack.packagemanager.R;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.smartpack.packagemanager.adapters.SettingsAdapter;
 import com.smartpack.packagemanager.utils.AppSettings;
 import com.smartpack.packagemanager.utils.Billing;
+import com.smartpack.packagemanager.utils.ExportNameBuilder;
 import com.smartpack.packagemanager.utils.SerializableItems.SettingsItems;
+import com.smartpack.packagemanager.utils.ThemeHelper;
 import com.smartpack.packagemanager.utils.Utils;
 
 import java.util.ArrayList;
@@ -68,8 +70,10 @@ public class SettingsFragment extends Fragment {
         mCopyright.setText(getString(R.string.copyright, getString(R.string.copyright_text)));
 
         mRecyclerView.setLayoutManager(new LinearLayoutManager(requireActivity()));
+        mData.clear();
         SettingsAdapter mRecycleViewAdapter = new SettingsAdapter(mData);
         mRecyclerView.setAdapter(mRecycleViewAdapter);
+        mRecyclerView.setVisibility(View.VISIBLE);
 
         mAppInfo.setOnClickListener(v -> {
             Intent settings = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
@@ -82,7 +86,7 @@ public class SettingsFragment extends Fragment {
         // User interface
         mData.add(new SettingsItems(getString(R.string.user_interface), null, null, null, true, 15));
         mData.add(new SettingsItems(getString(R.string.language), AppSettings.getLanguageDescription(requireActivity()), sCommonUtils.getDrawable(R.drawable.ic_language, requireActivity()), null, false, 18));
-        mData.add(new SettingsItems(getString(R.string.app_theme), sThemeUtils.getAppTheme(requireActivity()), sCommonUtils.getDrawable(R.drawable.ic_theme, requireActivity()), null, false, 18));
+        mData.add(new SettingsItems(getString(R.string.app_theme), ThemeHelper.getThemeSummary(requireActivity()), sCommonUtils.getDrawable(R.drawable.ic_theme, requireActivity()), null, false, 18));
 
         // General
         mData.add(new SettingsItems(getString(R.string.general), null, null, null, true, 15));
@@ -123,29 +127,30 @@ public class SettingsFragment extends Fragment {
                                 getString(R.string.app_theme_auto),
                                 getString(R.string.app_theme_dark),
                                 getString(R.string.app_theme_light)
-                        }, sCommonUtils.getInt("appTheme", 0, requireActivity()), requireActivity()) {
+                        }, ThemeHelper.getThemeIndex(requireActivity()), requireActivity()) {
 
                     @Override
                     public void onItemSelected(int selectedPosition) {
-                        if (selectedPosition == sCommonUtils.getInt("appTheme", 0, requireActivity())) {
+                        if (selectedPosition == ThemeHelper.getThemeIndex(requireActivity())) {
                             return;
                         }
+                        String themeVal;
                         switch (selectedPosition) {
                             case 2:
-                                sCommonUtils.saveInt("appTheme", 2, requireActivity());
-                                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+                                themeVal = "light";
                                 break;
                             case 1:
-                                sCommonUtils.saveInt("appTheme", 1, requireActivity());
-                                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+                                themeVal = "dark";
                                 break;
                             default:
-                                sCommonUtils.saveInt("appTheme", 0, requireActivity());
-                                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+                                themeVal = "auto";
                                 break;
                         }
-                        mData.get(position).setDescription(sThemeUtils.getAppTheme(requireActivity()));
+                        sCommonUtils.saveString(AppSettings.PREF_APP_THEME, themeVal, requireActivity());
+                        ThemeHelper.applyTheme(requireActivity());
+                        mData.get(position).setDescription(ThemeHelper.getThemeSummary(requireActivity()));
                         mRecycleViewAdapter.notifyItemChanged(position);
+                        requireActivity().recreate();
                     }
                 }.show();
             } else if (position == 4) {
@@ -154,20 +159,19 @@ public class SettingsFragment extends Fragment {
 
                     @Override
                     public void onItemSelected(int itemPosition) {
-                        switch (itemPosition) {
-                            case 0:
-                                if (!sCommonUtils.getString("exportedAPKName", getString(R.string.package_id), requireActivity()).equals(getString(R.string.package_id))) {
-                                    sCommonUtils.saveString("exportedAPKName", getString(R.string.package_id), requireActivity());
-                                }
+                        ExportNameBuilder.Mode newMode = ExportNameBuilder.Mode.values()[itemPosition];
+                        sCommonUtils.saveString(AppSettings.PREF_EXPORT_MODE, newMode.name(), requireActivity());
+                        switch (newMode) {
+                            case CUSTOM_TEMPLATE:
+                                showCustomTemplateDialogs(position, mRecycleViewAdapter);
                                 break;
-                            case 1:
-                                if (!sCommonUtils.getString("exportedAPKName", getString(R.string.package_id), requireActivity()).equals(getString(R.string.name))) {
-                                    sCommonUtils.saveString("exportedAPKName", getString(R.string.name), requireActivity());
-                                }
+                            case PACKAGE_NAME:
+                            case APP_NAME:
+                            case APP_PACKAGE_VERSION:
+                                mData.get(position).setDescription(AppSettings.getExportedAPKName(requireActivity()));
+                                mRecycleViewAdapter.notifyItemChanged(position);
                                 break;
                         }
-                        mData.get(position).setDescription(AppSettings.getExportedAPKName(requireActivity()));
-                        mRecycleViewAdapter.notifyItemChanged(position);
                     }
                 }.show();
             } else if (position == 5) {
@@ -246,6 +250,69 @@ public class SettingsFragment extends Fragment {
         });
 
         return mRootView;
+    }
+
+    private void showCustomTemplateDialogs(final int position, final SettingsAdapter recycleViewAdapter) {
+        final android.widget.EditText input = new android.widget.EditText(requireActivity());
+        input.setText(sCommonUtils.getString(AppSettings.PREF_EXPORT_TPL, "{appname}-{packageid}-{versionname}", requireActivity()));
+        
+        // Add padding to widen the dialog and improve UI
+        android.widget.FrameLayout container = new android.widget.FrameLayout(requireActivity());
+        android.widget.FrameLayout.LayoutParams params = new android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        int margin = (int) (24 * getResources().getDisplayMetrics().density);
+        params.setMargins(margin, 0, margin, 0);
+        input.setLayoutParams(params);
+        container.addView(input);
+
+        new MaterialAlertDialogBuilder(requireActivity())
+                .setTitle(R.string.exported_apps_name)
+                .setMessage("Enter custom naming template:\nSupported: {appname}, {packageid}, {versionname}, {versioncode}, {date}")
+                .setView(container)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    String inputStr = input.getText().toString().trim();
+                    String template = inputStr.isEmpty() ? "{appname}-{packageid}-{versionname}" : inputStr;
+                    sCommonUtils.saveString(AppSettings.PREF_EXPORT_TPL, template, requireActivity());
+                    new sSingleChoiceDialog(R.drawable.ic_pencil, "Select Separator",
+                            new String[] {
+                                    "Hyphen (-)",
+                                    "Underscore (_)",
+                                    "None (empty)"
+                            }, getSeparatorIndex(), requireActivity()) {
+                        @Override
+                        public void onItemSelected(int sepPosition) {
+                            String sep;
+                            switch (sepPosition) {
+                                case 1:
+                                    sep = "_";
+                                    break;
+                                case 2:
+                                    sep = "";
+                                    break;
+                                default:
+                                    sep = "-";
+                                    break;
+                            }
+                            sCommonUtils.saveString(AppSettings.PREF_EXPORT_SEP, sep, requireActivity());
+                            mData.get(position).setDescription(AppSettings.getExportedAPKName(requireActivity()));
+                            recycleViewAdapter.notifyItemChanged(position);
+                        }
+                    }.show();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private int getSeparatorIndex() {
+        String sep = sCommonUtils.getString(AppSettings.PREF_EXPORT_SEP, "-", requireActivity());
+        switch (sep) {
+            case "_":
+                return 1;
+            case "":
+                return 2;
+            default:
+                return 0;
+        }
     }
 
 }
