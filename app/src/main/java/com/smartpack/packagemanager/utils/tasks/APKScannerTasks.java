@@ -73,8 +73,9 @@ public class APKScannerTasks extends sExecutor {
         ContentResolver cr = mActivity.getContentResolver();
         Uri uri = MediaStore.Files.getContentUri("external");
         String[] projection = {MediaStore.Files.FileColumns.DATA};
-        String selection = MediaStore.Files.FileColumns.DATA + " LIKE '%.apk' OR " + 
-                          MediaStore.Files.FileColumns.DATA + " LIKE '%.apkm'";
+        String selection = MediaStore.Files.FileColumns.DATA + " LIKE '%.apk' OR " +
+                          MediaStore.Files.FileColumns.DATA + " LIKE '%.apkm' OR " +
+                          MediaStore.Files.FileColumns.DATA + " LIKE '%.apks'";
         
         try (Cursor cursor = cr.query(uri, projection, selection, null, null)) {
             if (cursor != null) {
@@ -104,7 +105,7 @@ public class APKScannerTasks extends sExecutor {
                 scanRecursive(file, exportDir, depth + 1);
             } else {
                 String path = file.getAbsolutePath();
-                if (path.toLowerCase().endsWith(".apk") || path.toLowerCase().endsWith(".apkm")) {
+                if (path.toLowerCase().endsWith(".apk") || path.toLowerCase().endsWith(".apkm") || path.toLowerCase().endsWith(".apks")) {
                     addPathIfValid(path, exportDir);
                 }
             }
@@ -114,13 +115,26 @@ public class APKScannerTasks extends sExecutor {
     private void addPathIfValid(String path, File exportDir) {
         if (path == null) return;
         File file = new File(path);
-        if (file.exists() && file.getParentFile() != null && !file.getParentFile().equals(exportDir)) {
-            synchronized (mFoundPaths) {
-                if (!mScannedPaths.contains(path)) {
-                    mFoundPaths.add(path);
-                    mScannedPaths.add(path);
-                    mActivity.runOnUiThread(() -> mProgressDialog.setMessage("Found: " + file.getName()));
-                }
+        if (!file.exists()) return;
+        // Use canonical paths to correctly handle symlinks and resolve the export dir
+        // regardless of how getPackageDir() is configured. Check startsWith so that
+        // files in any subdirectory of the export folder are also excluded.
+        try {
+            String canonicalFilePath = file.getCanonicalPath();
+            String canonicalExportDir = exportDir.getCanonicalPath();
+            if (canonicalFilePath.startsWith(canonicalExportDir + java.io.File.separator)
+                    || canonicalFilePath.equals(canonicalExportDir)) {
+                return;
+            }
+        } catch (java.io.IOException e) {
+            // Fallback: exclude by parent equality
+            if (file.getParentFile() != null && file.getParentFile().equals(exportDir)) return;
+        }
+        synchronized (mFoundPaths) {
+            if (!mScannedPaths.contains(path)) {
+                mFoundPaths.add(path);
+                mScannedPaths.add(path);
+                mActivity.runOnUiThread(() -> mProgressDialog.setMessage("Found: " + file.getName()));
             }
         }
     }

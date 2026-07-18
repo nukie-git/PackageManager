@@ -25,7 +25,7 @@ public class Downloads {
         List<String> mData = new ArrayList<>();
         for (File mFile : getDownloadList(context)) {
             if (sCommonUtils.getString("downloadTypes", "apks", context).equals("bundles")) {
-                if (mFile.exists() && mFile.getName().endsWith(".apkm")) {
+                if (mFile.exists() && (mFile.getName().endsWith(".apkm") || mFile.getName().endsWith(".apks"))) {
                     if (searchText == null || PackageData.isTextMatched(mFile.getName(), searchText)) {
                         mData.add(mFile.getAbsolutePath());
                     }
@@ -48,7 +48,8 @@ public class Downloads {
 
     private static File[] getDownloadList(Context context) {
         PackageData.makePackageFolder(context);
-        return PackageData.getPackageDir(context).listFiles();
+        File[] files = PackageData.getPackageDir(context).listFiles();
+        return files != null ? files : new File[0];
     }
 
 }

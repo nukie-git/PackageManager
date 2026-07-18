@@ -25,10 +25,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import in.sunilpaulmathew.sCommon.CommonUtils.sCommonUtils;
 import in.sunilpaulmathew.sCommon.FileUtils.sFileUtils;
+import in.sunilpaulmathew.sCommon.PackageUtils.sPackageUtils;
 
 /*
  * Created by sunilpaulmathew <sunil.kde@gmail.com> on January 12, 2020
@@ -88,9 +90,9 @@ public class PackageData {
             String appTypePref = sCommonUtils.getString("appTypes", "all", context);
             for (PackageItems item : rawData) {
                 boolean mAppType;
-                if (appTypePref.equals("system")) {
+                if (Objects.equals(appTypePref, "system")) {
                     mAppType = item.isSystemApp();
-                } else if (appTypePref.equals("user")) {
+                } else if (Objects.equals(appTypePref, "user")) {
                     mAppType = item.isUserApp();
                 } else {
                     mAppType = true;

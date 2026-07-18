@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import in.sunilpaulmathew.sCommon.CommonUtils.sCommonUtils;
 import in.sunilpaulmathew.sCommon.PackageUtils.sPackageUtils;
 
 /*
@@ -85,19 +86,18 @@ public abstract class BatchOptionsDialog extends MaterialAlertDialogBuilder {
             }
         } else {
             PackageManager pm = activity.getPackageManager();
+            android.content.Context context = activity.getApplicationContext();
             for (String path : items) {
                 File file = new File(path);
                 if (file.exists()) {
                     PackageInfo pi = pm.getPackageArchiveInfo(path, 0);
-                    if (pi != null) {
-                        if (pi.applicationInfo != null) {
-                            pi.applicationInfo.sourceDir = path;
-                            pi.applicationInfo.publicSourceDir = path;
-                        }
+                    if (pi != null && pi.applicationInfo != null) {
+                        pi.applicationInfo.sourceDir = path;
+                        pi.applicationInfo.publicSourceDir = path;
                         CharSequence label = pm.getApplicationLabel(pi.applicationInfo);
                         mBatchOptionsItems.add(new BatchOptionsItems(label, path, pm.getApplicationIcon(pi.applicationInfo), true, Integer.MIN_VALUE));
                     } else {
-                        mBatchOptionsItems.add(new BatchOptionsItems(file.getName(), path, activity.getDrawable(R.mipmap.ic_launcher), true, Integer.MIN_VALUE));
+                        mBatchOptionsItems.add(new BatchOptionsItems(file.getName(), path, androidx.core.content.ContextCompat.getDrawable(context, R.mipmap.ic_launcher), true, Integer.MIN_VALUE));
                     }
                 }
             }

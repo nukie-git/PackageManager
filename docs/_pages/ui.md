@@ -13,8 +13,7 @@ title: User Interface
   <tab1>
     The main user interface of Package Manager presents a simple yet elegant list view of applications, showing each application's <b>icon</b>, <b>name</b>, and <b>package ID</b>.  
     Each item also includes an icon to open the application (if available).  
-    Long-pressing an item initiates <a href="{{ site.github.url }}/batch/">batch processing</a> by enabling a checkbox, instead of using the "open" icon on the right side.  
-    (More details are provided later in this article.)
+    Long-pressing an item initiates <a href="{{ site.github.url }}/batch/">batch processing</a> by enabling a checkbox, or simply tap on the application icon. Once one or more items are selected, a floating <b>Batch Options</b> button will appear at the bottom right.
   </tab1>
 </p>
 
@@ -37,7 +36,13 @@ title: User Interface
 
 <p style="text-align: justify;">
   <tab1>
-    The bottom navigation bar provides quick access to <b>Exported Apps</b>, <b>Uninstalled Apps</b> (requires Root or Shizuku), and the <b>Settings</b> menu.
+    The bottom navigation bar provides quick access to <b>Apps</b>, <b>Exported Apps</b>, <b>Uninstalled Apps</b> (requires Root or Shizuku), and the <b>Settings</b> menu.
+  </tab1>
+</p>
+
+<p style="text-align: justify;">
+  <tab1>
+    The <b>Exported Apps</b> tab allows you to manage previously exported APKs and bundles. It now includes a powerful <b>APK Finder</b> (accessible via the <b>+</b> icon) that can automatically scan your device storage for app installers located outside the export folder and move/rename them according to your preferences.
   </tab1>
 </p>
 

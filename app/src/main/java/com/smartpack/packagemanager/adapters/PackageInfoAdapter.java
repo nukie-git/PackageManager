@@ -28,11 +28,11 @@ import java.util.List;
  */
 public class PackageInfoAdapter extends RecyclerView.Adapter<PackageInfoAdapter.ViewHolder> {
 
-    private static ClickListener mClickListener;
-    private static List<PackageInfoItems> data;
+    private ClickListener mClickListener;
+    private final List<PackageInfoItems> data;
 
     public PackageInfoAdapter(List<PackageInfoItems> data) {
-        PackageInfoAdapter.data = data;
+        this.data = data;
     }
 
     @NonNull
@@ -84,7 +84,7 @@ public class PackageInfoAdapter extends RecyclerView.Adapter<PackageInfoAdapter.
         return data.size();
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    public class ViewHolder extends RecyclerView.ViewHolder {
         private final MaterialButton mIcon;
         private final MaterialTextView mTitle, mDescription, mDescriptionOne, mDescriptionTwo;
 
@@ -99,7 +99,7 @@ public class PackageInfoAdapter extends RecyclerView.Adapter<PackageInfoAdapter.
     }
 
     public void setOnItemClickListener(ClickListener clickListener) {
-        PackageInfoAdapter.mClickListener = clickListener;
+        this.mClickListener = clickListener;
     }
 
     public interface ClickListener {

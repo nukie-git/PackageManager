@@ -314,12 +314,15 @@ public class ExportedAppsFragment extends Fragment {
 
             @Override
             public void doInBackground() {
-                File[] oldList = Objects.requireNonNull(requireActivity().getExternalFilesDir("")).listFiles();
+                File extDir = requireActivity().getExternalFilesDir("");
+                File[] oldList = extDir != null ? extDir.listFiles() : null;
                 PackageData.makePackageFolder(requireActivity());
-                for (File files : Objects.requireNonNull(oldList)) {
-                    if (files.isFile() && (files.getName().endsWith(".apk") || files.getName().endsWith(".apkm"))) {
-                        sFileUtils.copy(files, new File(PackageData.getPackageDir(requireActivity()), files.getName()));
-                        sFileUtils.delete(files);
+                if (oldList != null) {
+                    for (File files : oldList) {
+                        if (files.isFile() && (files.getName().endsWith(".apk") || files.getName().endsWith(".apkm") || files.getName().endsWith(".apks"))) {
+                            sFileUtils.copy(files, new File(PackageData.getPackageDir(requireActivity()), files.getName()));
+                            sFileUtils.delete(files);
+                        }
                     }
                 }
                 mRecycleViewAdapter = new ExportedAppsAdapter(Downloads.getData(searchTxt, requireActivity()), mBatchList, mBatch, installApp::launch, requireActivity());

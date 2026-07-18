@@ -16,5 +16,6 @@ include_in_footer: true
     <li><b>REQUEST_DELETE_PACKAGES</b> - necessary to uninstall applications.</li>
     <li><b>REQUEST_INSTALL_PACKAGES</b> - necessary to install split APK's.</li>
     <li><b>WRITE_EXTERNAL_STORAGE</b> - necessary to export APK's, and other resources to device storage (Android 10 and below).</li>
+    <li><b>MANAGE_EXTERNAL_STORAGE</b> - necessary for the "APK Finder" to scan for app installers across device storage (Android 11 and above).</li>
     <li><b>QUERY_ALL_PACKAGES</b> - necessary permission to get most applications visible in Android 11 and above.</li>
 </ol>

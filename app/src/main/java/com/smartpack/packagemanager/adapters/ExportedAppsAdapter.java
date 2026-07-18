@@ -133,7 +133,7 @@ public class ExportedAppsAdapter extends RecyclerView.Adapter<ExportedAppsAdapte
                         Uri uriFile = FileProvider.getUriForFile(v.getContext(), BuildConfig.APPLICATION_ID + ".provider",
                                 new File(data.get(position)));
                         Intent shareScript = new Intent(Intent.ACTION_SEND);
-                        shareScript.setType(data.get(position).endsWith(".apkm") ? "application/zip" : "application/java-archive");
+                        shareScript.setType((data.get(position).endsWith(".apkm") || data.get(position).endsWith(".apks")) ? "application/zip" : "application/java-archive");
                         shareScript.putExtra(Intent.EXTRA_SUBJECT, v.getContext().getString(R.string.shared_by, new File(data.get(position)).getName()));
                         shareScript.putExtra(Intent.EXTRA_TEXT, v.getContext().getString(R.string.share_message, BuildConfig.VERSION_NAME));
                         shareScript.putExtra(Intent.EXTRA_STREAM, uriFile);
@@ -201,7 +201,7 @@ public class ExportedAppsAdapter extends RecyclerView.Adapter<ExportedAppsAdapte
                 return;
             }
 
-            if (path.endsWith(".apkm")) {
+            if (path.endsWith(".apkm") || path.endsWith(".apks")) {
                 new sExecutor() {
                     private final List<APKPickerItems> mAPKs = new ArrayList<>();
                     private ProgressDialog mProgressDialog;
@@ -224,7 +224,12 @@ public class ExportedAppsAdapter extends RecyclerView.Adapter<ExportedAppsAdapte
                             mProgressDialog.setMax(zipFile.getFileHeaders().size());
                             for (FileHeader fileHeaders : zipFile.getFileHeaders()) {
                                 if (fileHeaders.getFileName().endsWith(".apk")) {
-                                    File apkFile = new File(activity.getCacheDir(), fileHeaders.getFileName());
+                                    String fileName = fileHeaders.getFileName();
+                                    // Protect against Zip Slip Vulnerability
+                                    if (fileName.contains("../") || fileName.contains("..\\")) {
+                                        continue;
+                                    }
+                                    File apkFile = new File(activity.getCacheDir(), fileName);
                                     zipFile.extractFile(fileHeaders, activity.getCacheDir().getAbsolutePath());
                                     mAPKs.add(new APKPickerItems(apkFile, FilePicker.isSelectedAPK(apkFile, activity)));
 

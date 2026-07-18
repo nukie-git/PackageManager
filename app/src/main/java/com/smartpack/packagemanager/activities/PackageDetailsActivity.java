@@ -10,6 +10,7 @@ package com.smartpack.packagemanager.activities;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatImageView;
@@ -61,14 +62,26 @@ public class PackageDetailsActivity extends BaseActivity {
         boolean systemApp = getIntent().getBooleanExtra(SYSTEM_APP, false);
         boolean launchable = getIntent().getBooleanExtra(LAUNCHER_INTENT, false);
         boolean apkPicked = getIntent().getBooleanExtra(APK_PICKED, false);
+        
+        if (packageName == null) {
+            finish();
+            return;
+        }
 
         mAppIcon.setImageDrawable(sPackageUtils.getAppIcon(packageName, this));
-        mAppName.setText(appName);
-        mVersion.setText(getString(R.string.version, sAPKUtils.getVersionName(sPackageUtils.getSourceDir(packageName, this), this)));
+        mAppName.setText(appName != null ? appName : packageName);
+        
+        String sourceDir = sPackageUtils.getSourceDir(packageName, this);
+        if (sourceDir != null) {
+            mVersion.setText(getString(R.string.version, sAPKUtils.getVersionName(sourceDir, this)));
+        } else {
+            mVersion.setVisibility(View.GONE);
+        }
 
         PagerAdapter adapter = new PagerAdapter(this);
         adapter.addFragment(PackageInfoFragment.newInstance(appName, packageName, systemApp, launchable), getString(R.string.app_info));
-        if (new File(sPackageUtils.getSourceDir(packageName, this)).getName().equals("base.apk") && SplitAPKInstaller.splitApks(sPackageUtils.getParentDir(packageName, this)).size() > 1) {
+        
+        if (sourceDir != null && new File(sourceDir).getName().equals("base.apk") && SplitAPKInstaller.splitApks(sPackageUtils.getParentDir(packageName, this)).size() > 1) {
             adapter.addFragment(SplitApksFragment.newInstance(packageName), getString(R.string.split_apk));
         }
         if (!PackageDetails.getPermissions(packageName, this).isEmpty()) {

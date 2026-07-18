@@ -73,31 +73,83 @@ public class ImportExternalApkTask extends sExecutor {
             }
 
             if (srcFile != null && srcFile.exists()) {
+                String originalName = srcFile.getName().toLowerCase();
+                File metaApk = null;
                 try {
                     PackageInfo pi = pm.getPackageArchiveInfo(srcFile.getAbsolutePath(), 0);
-                    if (pi != null) {
-                        if (pi.applicationInfo != null) {
-                            pi.applicationInfo.sourceDir = srcFile.getAbsolutePath();
-                            pi.applicationInfo.publicSourceDir = srcFile.getAbsolutePath();
-                        }
-                        
-                        String extension = srcFile.getName().endsWith(".apkm") ? ".apkm" : ".apk";
-                        String exportName = ExportNameBuilder.getExportName(mActivity, pi);
-                        File finalFile = new File(exportDir, exportName + extension);
-                        
-                        sFileUtils.copy(srcFile, finalFile);
-                        if (finalFile.exists()) {
-                            mSuccessCount++;
-                            // If it was a real file (not from Uri), we should delete the original as requested "move"
-                            if (!deleteSrc && !srcFile.getParentFile().equals(exportDir)) {
-                                srcFile.delete();
+                    
+                    // If directly parsing failed and it's a bundle (.apks/.apkm), try parsing an internal APK
+                    if (pi == null && (originalName.endsWith(".apkm") || originalName.endsWith(".apks") || originalName.endsWith(".zip"))) {
+                        try (net.lingala.zip4j.ZipFile zipFile = new net.lingala.zip4j.ZipFile(srcFile)) {
+                            List<net.lingala.zip4j.model.FileHeader> headers = zipFile.getFileHeaders();
+                            net.lingala.zip4j.model.FileHeader targetHeader = null;
+                            for (net.lingala.zip4j.model.FileHeader header : headers) {
+                                if (header.getFileName().equalsIgnoreCase("base.apk")) {
+                                    targetHeader = header;
+                                    break;
+                                }
                             }
+                            if (targetHeader == null) {
+                                for (net.lingala.zip4j.model.FileHeader header : headers) {
+                                    if (header.getFileName().toLowerCase().endsWith(".apk")) {
+                                        targetHeader = header;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            if (targetHeader != null) {
+                                String entryName = targetHeader.getFileName();
+                                if (!(entryName.contains("../") || entryName.contains("..\\"))) {
+                                    metaApk = new File(mActivity.getCacheDir(), "meta_" + System.currentTimeMillis() + ".apk");
+                                    zipFile.extractFile(targetHeader, mActivity.getCacheDir().getAbsolutePath(), metaApk.getName());
+                                    pi = pm.getPackageArchiveInfo(metaApk.getAbsolutePath(), 0);
+                                }
+                            }
+                        } catch (Exception ignored) {
                         }
                     }
+
+                    String exportName;
+                    String extension;
+                    if (originalName.endsWith(".apkm")) extension = ".apkm";
+                    else if (originalName.endsWith(".apks")) extension = ".apks";
+                    else extension = ".apk";
+
+                    if (pi != null) {
+                        if (pi.applicationInfo != null) {
+                            // Point to the file containing resources (either the apk itself or the extracted base.apk)
+                            File resourceFile = (metaApk != null) ? metaApk : srcFile;
+                            pi.applicationInfo.sourceDir = resourceFile.getAbsolutePath();
+                            pi.applicationInfo.publicSourceDir = resourceFile.getAbsolutePath();
+                        }
+                        exportName = ExportNameBuilder.getExportName(mActivity, pi);
+                    } else {
+                        // Fallback: use original name without extension
+                        exportName = srcFile.getName();
+                        if (exportName.lastIndexOf('.') > 0) {
+                            exportName = exportName.substring(0, exportName.lastIndexOf('.'));
+                        }
+                    }
+                    
+                    File finalFile = new File(exportDir, exportName + extension);
+                    sFileUtils.copy(srcFile, finalFile);
+                    
+                    if (finalFile.exists()) {
+                        mSuccessCount++;
+                        File parent = srcFile.getParentFile();
+                        if (!deleteSrc && parent != null && !parent.getAbsolutePath().equals(exportDir.getAbsolutePath())) {
+                            srcFile.delete();
+                        }
+                    }
+                    
                 } catch (Exception e) {
                     android.util.Log.e("SmartPack", "Failed to import APK: " + source, e);
                 } finally {
-                    if (deleteSrc && srcFile.exists()) {
+                    if (metaApk != null && metaApk.exists()) {
+                        metaApk.delete();
+                    }
+                    if (deleteSrc && srcFile != null && srcFile.exists()) {
                         srcFile.delete();
                     }
                 }

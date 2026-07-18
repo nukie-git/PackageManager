@@ -6,6 +6,20 @@ include_in_footer: true
 
 <h2 style="color: blue">🆕 What's New</h2>
 
+### ✨ 76. [7.11](https://play.google.com/store/apps/details?id=com.smartpack.packagemanager.pro) *(July 21, 2026)*
+- Optimized app list scanning logic (up to 4x faster).
+- Improved Batch Operations with a new confirmation dialog.
+- Enhanced APK Finder with deeper storage scanning and selectable results.
+- Fixed numerous UI visibility bugs and performance bottlenecks.
+- Bumped app version to 7.11.
+
+### ✨ 75. [7.10](https://play.google.com/store/apps/details?id=com.smartpack.packagemanager.pro) *(July 18, 2026)*
+- Added support for finding, importing, and exploring `.apks` bundles.
+- Patched Zip Slip vulnerabilities and missing null-checks for safer execution.
+- Fixed renaming logic for imported ZIP-based bundles (.apkm and .apks).
+- Fixed custom separator logic when using the App/Package/Version renaming template.
+- Bumped app version to 7.10.
+
 ### ✨ 74. [7.9](https://play.google.com/store/apps/details?id=com.smartpack.packagemanager.pro) *(May 22, 2026)*
 - Fixed numerous IDE warnings and potential bugs in Settings.
 - Improved naming template and separator logic.

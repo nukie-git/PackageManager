@@ -27,11 +27,11 @@ import java.util.List;
  */
 public class PackageOptionsAdapter extends RecyclerView.Adapter<PackageOptionsAdapter.ViewHolder> {
 
-    private static ClickListener mClickListener;
-    private static List<PackageOptionsItems> data;
+    private ClickListener mClickListener;
+    private final List<PackageOptionsItems> data;
 
     public PackageOptionsAdapter(List<PackageOptionsItems> data) {
-        PackageOptionsAdapter.data = data;
+        this.data = data;
     }
 
     @NonNull
@@ -54,7 +54,7 @@ public class PackageOptionsAdapter extends RecyclerView.Adapter<PackageOptionsAd
         return data.size();
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         private final MaterialButton mIcon;
 
         public ViewHolder(View view) {
@@ -65,12 +65,14 @@ public class PackageOptionsAdapter extends RecyclerView.Adapter<PackageOptionsAd
 
         @Override
         public void onClick(View view) {
-            mClickListener.onItemClick(getBindingAdapterPosition(), view);
+            if (mClickListener != null) {
+                mClickListener.onItemClick(getBindingAdapterPosition(), view);
+            }
         }
     }
 
     public void setOnItemClickListener(ClickListener clickListener) {
-        PackageOptionsAdapter.mClickListener = clickListener;
+        this.mClickListener = clickListener;
     }
 
     public interface ClickListener {

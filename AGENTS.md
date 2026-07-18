@@ -1,6 +1,6 @@
 # AGENTS.md — SmartPack Package Manager AI Agent Guide
 
-**Project:** SmartPack Package Manager v7.9  
+**Project:** SmartPack Package Manager v7.11
 **Language:** Java (Android)  
 **Build System:** Gradle 8.12 with AGP 8.10.1  
 **Min SDK:** 24 → 26 (Android 7–15)  

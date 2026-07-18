@@ -275,11 +275,13 @@ public class PackageTasksFragment extends Fragment {
                          for (PackageItems mPackage : mData) {
                              mBatchList.add(mPackage.getPackageName());
                          }
-                         loadUI(mSearchText, requireActivity());
+                         updateBatchButtonVisibility();
+                         mRecycleViewAdapter.notifyDataSetChanged();
                          break;
                      case 3:
                          mBatchList.clear();
-                         loadUI(mSearchText, requireActivity());
+                         updateBatchButtonVisibility();
+                         mRecycleViewAdapter.notifyDataSetChanged();
                          break;
                  }
                  return true;
@@ -309,6 +311,13 @@ public class PackageTasksFragment extends Fragment {
         return mRootView;
     }
 
+    private void updateBatchButtonVisibility() {
+        if (mBatchOptions != null) {
+            mBatchOptions.setVisibility(!mBatchList.isEmpty() ? View.VISIBLE : GONE);
+            mBatchOptions.setText(requireActivity().getString(R.string.batch_options, mBatchList.size()));
+        }
+    }
+
     private void handleBatchExport(Activity activity) {
         new BatchOptionsDialog(getString(R.string.export_selected), getString(R.string.export), mBatchList, activity) {
             @Override
@@ -322,6 +331,7 @@ public class PackageTasksFragment extends Fragment {
                 new com.smartpack.packagemanager.utils.tasks.BatchExportTasks(selected, activity).execute();
 
                 mBatchList.clear();
+                updateBatchButtonVisibility();
                 loadUI(mSearchText, activity);
             }
         };
@@ -348,6 +358,7 @@ public class PackageTasksFragment extends Fragment {
                             if (mRootShell.rootAccess() || mShizukuShell.isReady()) {
                                 new com.smartpack.packagemanager.utils.tasks.BatchUninstallTasks(selected, activity).execute();
                                 mBatchList.clear();
+                                updateBatchButtonVisibility();
                                 loadUI(mSearchText, activity);
                             } else {
                                 // Non-root batch uninstall (system-by-system)
@@ -379,6 +390,7 @@ public class PackageTasksFragment extends Fragment {
     private void loadUI(String searchTxt, Activity activity) {
         new sExecutor() {
             ShimmerFrameLayout shimmer = null;
+            List<PackageItems> loadedData;
 
             @Override
             public void onPreExecute() {
@@ -405,16 +417,15 @@ public class PackageTasksFragment extends Fragment {
                     android.util.Log.d("SmartPack", "loadUI: First load, check initialization");
                     PackageData.init(activity);
                 }
-                mData = PackageData.getData(searchTxt, activity);
+                loadedData = PackageData.getData(searchTxt, activity);
                 long end = System.currentTimeMillis();
-                android.util.Log.d("SmartPack", "loadUI.doInBackground: retrieved " + (mData != null ? mData.size() : 0) + " items in " + (end - start) + "ms");
+                android.util.Log.d("SmartPack", "loadUI.doInBackground: retrieved " + (loadedData != null ? loadedData.size() : 0) + " items in " + (end - start) + "ms");
                 
-                if (mData == null || mData.isEmpty()) {
+                if (loadedData == null || loadedData.isEmpty()) {
                     android.util.Log.d("SmartPack", "loadUI: data empty, regenerating");
                     PackageData.generateData(null, activity);
-                    mData = PackageData.getData(searchTxt, activity);
+                    loadedData = PackageData.getData(searchTxt, activity);
                 }
-                mRecycleViewAdapter = new PackageTasksAdapter(mData, searchTxt, mBatchList, mBatchOptions, diableOrUninstall, activity);
             }
 
             @SuppressLint("StringFormatInvalid")
@@ -424,11 +435,16 @@ public class PackageTasksFragment extends Fragment {
                 if (!isAdded()) {
                     return;
                 }
+                mData = loadedData;
                 mSearchText = searchTxt;
-                mSearchWord.setHint(getString(R.string.search_market_message, mRecycleViewAdapter.getItemCount() + " " + getString(R.string.applications)));
-                mBatchOptions.setVisibility(!mBatchList.isEmpty() ? View.VISIBLE : GONE);
-                mBatchOptions.setText(activity.getString(R.string.batch_options, mBatchList.size()));
+                
+                mRecycleViewAdapter = new PackageTasksAdapter(mData, searchTxt, mBatchList, detailsLauncher);
+                mRecycleViewAdapter.setOnSelectionChangeListener(count -> updateBatchButtonVisibility());
                 mRecyclerView.setAdapter(mRecycleViewAdapter);
+                
+                mSearchWord.setHint(getString(R.string.search_market_message, mRecycleViewAdapter.getItemCount() + " " + getString(R.string.applications)));
+                
+                updateBatchButtonVisibility();
 
                 if (shimmer != null) {
                     shimmer.stopShimmer();
@@ -485,10 +501,17 @@ public class PackageTasksFragment extends Fragment {
     private final ActivityResultLauncher<Intent> diableOrUninstall = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
-                if (result.getResultCode() == Activity.RESULT_OK) {
+                String pkg = mPackageNameRemoved;
+                if (pkg != null && !sPackageUtils.isPackageInstalled(pkg, requireActivity())) {
+                    removeItem(pkg).execute();
+                    mPackageNameRemoved = null;
+                    return;
+                }
+
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
                     Intent data = result.getData();
-                    String packageName = data != null ? data.getStringExtra("packageName") : null;
-                    String packageNameDisabled = data != null ? data.getStringExtra("packageNameDisabled") : null;
+                    String packageName = data.getStringExtra("packageName");
+                    String packageNameDisabled = data.getStringExtra("packageNameDisabled");
                     if (packageName != null) {
                         if (sPackageUtils.isPackageInstalled(packageName, requireActivity())) {
                             uninstallUserApp(packageName);
@@ -542,30 +565,65 @@ public class PackageTasksFragment extends Fragment {
     );
 
     @SuppressLint("StringFormatInvalid")
+    private final ActivityResultLauncher<Intent> detailsLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    String packageName = result.getData().getStringExtra("packageName");
+                    if (packageName != null) {
+                        if (sPackageUtils.isPackageInstalled(packageName, requireActivity())) {
+                            uninstallUserApp(packageName);
+                        } else {
+                            removeItem(packageName).execute();
+                        }
+                    }
+                }
+            }
+    );
+
+    @SuppressLint("StringFormatInvalid")
     private final ActivityResultLauncher<Intent> uninstallApps = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
-                if (result.getResultCode() == Activity.RESULT_OK) {
-                    // If uninstallation succeed
-                    try {
-                        for (PackageItems item : PackageData.getRawData()) {
-                            if (item.getPackageName().equals(mBatchList.get(0))) {
-                                PackageData.getRawData().remove(item);
-                                mBatchList.remove(0);
+                if (mBatchList.isEmpty()) {
+                    loadUI(mSearchText, requireActivity());
+                    return;
+                }
 
-                                int index = mData.indexOf(item);
-                                if (index != -1) {
-                                    mData.remove(index);
-                                    mRecycleViewAdapter.notifyItemRangeChanged(0, mRecycleViewAdapter.getItemCount());
-                                }
+                String currentPackage = mBatchList.get(0);
+                boolean isInstalled = sPackageUtils.isPackageInstalled(currentPackage, requireActivity());
+
+                if (!isInstalled || result.getResultCode() == Activity.RESULT_OK) {
+                    // If uninstallation succeed or reported as OK
+                    try {
+                        PackageItems itemToRemove = null;
+                        for (PackageItems item : PackageData.getRawData()) {
+                            if (item.getPackageName().equals(currentPackage)) {
+                                itemToRemove = item;
+                                break;
                             }
                         }
-                    } catch (ConcurrentModificationException ignored) {}
+                        if (itemToRemove != null) {
+                            PackageData.getRawData().remove(itemToRemove);
+                        }
+                        mBatchList.remove(0);
+                        // Refresh display list
+                        if (mData != null) {
+                            mData.removeIf(p -> p.getPackageName().equals(currentPackage));
+                            if (mRecycleViewAdapter != null) {
+                                mRecycleViewAdapter.notifyDataSetChanged();
+                            }
+                        }
+                    } catch (Exception ignored) {}
                     handleUninstallEvent();
                 } else {
-                    sCommonUtils.toast(getString(R.string.uninstall_status_failed, sPackageUtils.getAppName(mBatchList.get(0), requireActivity())), requireActivity()).show();
+                    try {
+                        sCommonUtils.toast(getString(R.string.uninstall_status_failed, sPackageUtils.getAppName(currentPackage, requireActivity())), requireActivity()).show();
+                    } catch (Exception ignored) {}
                     mBatchList.remove(0);
-                    mRecycleViewAdapter.notifyItemRangeChanged(0, mRecycleViewAdapter.getItemCount());
+                    if (mRecycleViewAdapter != null) {
+                        mRecycleViewAdapter.notifyDataSetChanged();
+                    }
                     handleUninstallEvent();
                 }
             }

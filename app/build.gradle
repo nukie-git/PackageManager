@@ -24,8 +24,8 @@ android {
         applicationId "com.smartpack.packagemanager"
         minSdkVersion 24
         targetSdk = 37
-        versionCode 79
-        versionName "7.9"
+        versionCode 81
+        versionName "7.11"
         vectorDrawables.useSupportLibrary = true
         testFunctionalTest = false
         testHandleProfiling = false
@@ -85,7 +85,9 @@ dependencies {
 
     implementation libs.documentfile
 
-    implementation libs.crashreporter
+    implementation(libs.crashreporter) {
+        exclude group: 'com.github.sunilpaulmathew.sCommon', module: 'apkutils'
+    }
     implementation libs.credits
     implementation libs.installerutils
     implementation libs.permissionutils

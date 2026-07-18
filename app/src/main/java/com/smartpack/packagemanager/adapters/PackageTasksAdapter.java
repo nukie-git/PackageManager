@@ -12,7 +12,6 @@ import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -47,20 +46,25 @@ import in.sunilpaulmathew.sCommon.PackageUtils.sPackageUtils;
  */
 public class PackageTasksAdapter extends RecyclerView.Adapter<PackageTasksAdapter.ViewHolder> {
 
-    private final Activity activity;
-    private final ActivityResultLauncher<Intent> uninstallApps;
+    private final ActivityResultLauncher<Intent> detailsLauncher;
     private final List<PackageItems> data;
     private final List<String> batchList;
-    private final MaterialButton batchButton;
     private final String searchText;
+    private SelectionChangeListener selectionListener;
 
-    public PackageTasksAdapter(List<PackageItems> data, String searchText, List<String> batchList, MaterialButton batchButton, ActivityResultLauncher<Intent> uninstallApps, Activity activity) {
+    public interface SelectionChangeListener {
+        void onSelectionChanged(int count);
+    }
+
+    public PackageTasksAdapter(List<PackageItems> data, String searchText, List<String> batchList, ActivityResultLauncher<Intent> detailsLauncher) {
         this.data = data;
         this.searchText = searchText;
         this.batchList = batchList;
-        this.batchButton = batchButton;
-        this.uninstallApps = uninstallApps;
-        this.activity = activity;
+        this.detailsLauncher = detailsLauncher;
+    }
+
+    public void setOnSelectionChangeListener(SelectionChangeListener listener) {
+        this.selectionListener = listener;
     }
 
     @NonNull
@@ -74,25 +78,17 @@ public class PackageTasksAdapter extends RecyclerView.Adapter<PackageTasksAdapte
     @Override
     public void onBindViewHolder(@NonNull PackageTasksAdapter.ViewHolder holder, int position) {
         try {
-            if (!sPackageUtils.isPackageInstalled(data.get(position).getPackageName(), holder.appID.getContext())) {
-                return;
-            }
             this.data.get(position).loadAppIcon(holder.appIcon);
 
-            holder.checkBox.setChecked(batchList.contains(data.get(position).getPackageName()));
+            boolean isSelected = batchList.contains(data.get(position).getPackageName());
+            holder.checkBox.setChecked(isSelected);
 
-            if (batchList.isEmpty()) {
-                batchButton.setVisibility(GONE);
+            if (isSelected) {
+                holder.checkBox.setVisibility(VISIBLE);
+                holder.appIcon.setVisibility(GONE);
             } else {
-                if (batchList.contains(this.data.get(position).getPackageName())) {
-                    holder.checkBox.setVisibility(VISIBLE);
-                    holder.appIcon.setVisibility(GONE);
-                } else {
-                    holder.checkBox.setVisibility(GONE);
-                    holder.appIcon.setVisibility(VISIBLE);
-                }
-                batchButton.setText(activity.getString(R.string.batch_options, batchList.size()));
-                batchButton.setVisibility(VISIBLE);
+                holder.checkBox.setVisibility(GONE);
+                holder.appIcon.setVisibility(VISIBLE);
             }
 
             if (searchText != null && PackageData.isTextMatched(data.get(position).getPackageName(), searchText)) {
@@ -117,10 +113,11 @@ public class PackageTasksAdapter extends RecyclerView.Adapter<PackageTasksAdapte
 
             holder.appIcon.setOnClickListener(v -> {
                 sCommonUtils.toast(v.getContext().getString(R.string.batch_list_added, data.get(position).getAppName()), v.getContext()).show();
-                v.post(() -> {
-                    batchList.add(this.data.get(position).getPackageName());
-                    notifyItemChanged(position);
-                });
+                batchList.add(this.data.get(position).getPackageName());
+                notifyItemChanged(position);
+                if (selectionListener != null) {
+                    selectionListener.onSelectionChanged(batchList.size());
+                }
             });
 
             holder.appIcon.setOnLongClickListener(v -> {
@@ -155,10 +152,11 @@ public class PackageTasksAdapter extends RecyclerView.Adapter<PackageTasksAdapte
                     return;
                 }
                 sCommonUtils.toast(v.getContext().getString(R.string.batch_list_removed, data.get(position).getAppName()), v.getContext()).show();
-                v.post(() -> {
-                    batchList.remove(this.data.get(position).getPackageName());
-                    notifyItemChanged(position);
-                });
+                batchList.remove(this.data.get(position).getPackageName());
+                notifyItemChanged(position);
+                if (selectionListener != null) {
+                    selectionListener.onSelectionChanged(batchList.size());
+                }
             });
 
             AppSettings.setSlideInAnimation(holder.appIcon, position);
@@ -199,10 +197,11 @@ public class PackageTasksAdapter extends RecyclerView.Adapter<PackageTasksAdapte
 
             if (batchList.contains(packageItems.getPackageName())) {
                 sCommonUtils.toast(view.getContext().getString(R.string.batch_list_removed, data.get(getBindingAdapterPosition()).getAppName()), view.getContext()).show();
-                view.post(() -> {
-                    batchList.remove(packageItems.getPackageName());
-                    notifyItemChanged(getBindingAdapterPosition());
-                });
+                batchList.remove(packageItems.getPackageName());
+                notifyItemChanged(getBindingAdapterPosition());
+                if (selectionListener != null) {
+                    selectionListener.onSelectionChanged(batchList.size());
+                }
                 return;
             }
 
@@ -212,7 +211,7 @@ public class PackageTasksAdapter extends RecyclerView.Adapter<PackageTasksAdapte
             details.putExtra(PackageDetailsActivity.SYSTEM_APP, packageItems.isSystemApp());
             details.putExtra(PackageDetailsActivity.LAUNCHER_INTENT, packageItems.launchIntent(view.getContext()) != null);
             details.putExtra(PackageDetailsActivity.APK_PICKED, false);
-            uninstallApps.launch(details);
+            detailsLauncher.launch(details);
         }
     }
 

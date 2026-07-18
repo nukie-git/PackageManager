@@ -54,6 +54,7 @@ import java.util.Objects;
 
 import in.sunilpaulmathew.sCommon.APKUtils.sAPKUtils;
 import in.sunilpaulmathew.sCommon.CommonUtils.sCommonUtils;
+import in.sunilpaulmathew.sCommon.CommonUtils.sExecutor;
 import in.sunilpaulmathew.sCommon.FileUtils.sFileUtils;
 import in.sunilpaulmathew.sCommon.PackageUtils.sPackageUtils;
 import in.sunilpaulmathew.sCommon.PermissionUtils.sPermissionUtils;
@@ -67,6 +68,7 @@ public class PackageInfoFragment extends Fragment {
     private boolean mLaunchIntent = false, mRootOrShizuku = false, mSystemApp = false;
     private String mAppName, mPackageName;
     private FragmentPackageinfoBinding binding;
+    private RecyclerView mPackageOptionsRecycler, mPackageInfoRecycler;
 
     public PackageInfoFragment() {
     }
@@ -102,157 +104,17 @@ public class PackageInfoFragment extends Fragment {
         binding = FragmentPackageinfoBinding.inflate(inflater, container, false);
         View mRootView = binding.getRoot();
 
-        RecyclerView mPackageOptions = binding.packageOptions;
-        RecyclerView mPackageInfo = mRootView.findViewById(R.id.recycler_view);
+        mPackageOptionsRecycler = binding.packageOptions;
+        mPackageInfoRecycler = mRootView.findViewById(R.id.recycler_view);
 
-        PackageOptionsAdapter mPackageOptionsAdapter;
-        PackageInfoAdapter mPackageInfoAdapter;
-        mPackageOptions.setLayoutManager(new LinearLayoutManager(requireActivity(), LinearLayoutManager.HORIZONTAL, false));
-        mPackageInfo.setLayoutManager(new LinearLayoutManager(requireActivity()));
+        mPackageOptionsRecycler.setLayoutManager(new LinearLayoutManager(requireActivity(), LinearLayoutManager.HORIZONTAL, false));
+        mPackageInfoRecycler.setLayoutManager(new LinearLayoutManager(requireActivity()));
+        
+        mPackageInfoRecycler.setVisibility(View.VISIBLE);
 
-        Drawable appIcon = sPackageUtils.getAppIcon(mPackageName, requireActivity());
+        loadData();
 
-        // Default to false and check privilege off the main thread to avoid blocking UI
-        mRootOrShizuku = false;
-
-        mPackageOptionsAdapter = new PackageOptionsAdapter(getPackageOptionsData());
-        mPackageInfoAdapter = new PackageInfoAdapter(getPackageInfoData());
-        mPackageOptions.setAdapter(mPackageOptionsAdapter);
-        mPackageInfo.setAdapter(mPackageInfoAdapter);
-
-        // Perform root / Shizuku availability check off the main thread and refresh adapters
-        new Thread(() -> {
-            boolean hasRoot = new RootShell().rootAccess();
-            boolean shizReady = new ShizukuShell().isReady();
-            final boolean privilege = hasRoot || shizReady;
-            requireActivity().runOnUiThread(() -> {
-                mRootOrShizuku = privilege;
-                if (mPackageInfoAdapter != null) mPackageInfoAdapter.notifyDataSetChanged();
-                if (mPackageOptionsAdapter != null) mPackageOptionsAdapter.notifyDataSetChanged();
-            });
-        }).start();
-
-        mPackageOptionsAdapter.setOnItemClickListener((position, v) -> {
-            switch (getPackageOptionsData().get(position).getPosition()) {
-                case 0:
-                    if (mPackageName.equals(BuildConfig.APPLICATION_ID)) {
-                        sCommonUtils.toast(getString(R.string.open_message), requireActivity()).show();
-                    } else {
-                        Intent launchIntent = requireActivity().getPackageManager().getLaunchIntentForPackage(mPackageName);
-                        if (launchIntent != null) {
-                            startActivity(launchIntent);
-                        } else {
-                            sCommonUtils.toast(getString(R.string.open_failed, mAppName), requireActivity()).show();
-                        }
-                    }
-                    break;
-                case 1:
-                    new ExploreAPKTasks(mAppName, mPackageName, sPackageUtils.getSourceDir(mPackageName, requireActivity()), requireActivity()).execute();
-                    break;
-                case 2:
-                    new MaterialAlertDialogBuilder(requireActivity())
-                            .setIcon(appIcon)
-                            .setTitle(mAppName)
-                            .setMessage(mAppName + " " + getString(R.string.disable_message,
-                                    sPackageUtils.isEnabled(mPackageName, requireActivity()) ?
-                                            getString(R.string.disabled) : getString(R.string.enabled)))
-                            .setCancelable(false)
-                            .setNegativeButton(getString(R.string.cancel), (dialog, id) -> {
-                            })
-                            .setPositiveButton(getString(R.string.yes), (dialog, id) -> new DisableAppTasks(mAppName, mPackageName, requireActivity()).execute())
-                            .show();
-                    break;
-                case 3:
-                    if (mPackageName.equals(BuildConfig.APPLICATION_ID)) {
-                        sCommonUtils.toast(getString(R.string.uninstall_nope), requireActivity()).show();
-                    } else if (!mSystemApp) {
-                        Intent intent = new Intent();
-                        intent.putExtra("packageName", mPackageName);
-                        requireActivity().setResult(Activity.RESULT_OK, intent);
-                        requireActivity().finish();
-                    } else {
-                        PackageDetails.uninstallSystemApp(mPackageName, mAppName, appIcon, requireActivity());
-                    }
-                    break;
-                default:
-                    Intent settings = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                    settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    Uri uri = Uri.fromParts("package", mPackageName, null);
-                    settings.setData(uri);
-                    startActivity(settings);
-                    requireActivity().finish();
-                    break;
-            }
-        });
-
-        mPackageInfoAdapter.setOnItemClickListener((position, v) -> {
-            if (position == 0) {
-                List<MenuItems> menuItems = new ArrayList<>();
-                menuItems.add(new MenuItems(v.getContext().getString(R.string.search_market_message, v.getContext().getString(R.string.playstore)), null, 0));
-                menuItems.add(new MenuItems(v.getContext().getString(R.string.search_market_message, v.getContext().getString(R.string.fdroid)), null, 1));
-                menuItems.add(new MenuItems(v.getContext().getString(R.string.export_details), null, 2));
-                menuItems.add(new MenuItems(v.getContext().getString(R.string.share), null, 3));
-
-                new BottomMenuDialog(menuItems, appIcon, null, mAppName, mPackageName, v.getContext()) {
-                    @Override
-                    public void onMenuItemClicked(int menuID) {
-                        switch (menuID) {
-                            case 0:
-                                sCommonUtils.launchUrl("https://play.google.com/store/apps/details?id=" + mPackageName, requireActivity());
-                                break;
-                            case 1:
-                                sCommonUtils.launchUrl("https://f-droid.org/packages/" + mPackageName, requireActivity());
-                                break;
-                            case 2:
-                                if (Build.VERSION.SDK_INT < 29 && sPermissionUtils.isPermissionDenied(android.Manifest.permission.WRITE_EXTERNAL_STORAGE, requireActivity())) {
-                                    requestPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-                                } else {
-                                    PackageData.makePackageFolder(requireActivity());
-                                    File mJSON = new File(PackageData.getPackageDir(requireActivity()), mPackageName + "_" + sAPKUtils.getVersionCode(
-                                            sPackageUtils.getSourceDir(mPackageName, requireActivity()), requireActivity()) + ".json");
-                                    sFileUtils.create(Objects.requireNonNull(PackageDetails.getPackageDetails(mPackageName, requireActivity())).toString(), mJSON);
-
-                                    new MaterialAlertDialogBuilder(requireActivity())
-                                            .setIcon(R.mipmap.ic_launcher)
-                                            .setTitle(R.string.app_name)
-                                            .setMessage(getString(R.string.export_details_message, mJSON.getAbsolutePath()))
-                                            .setPositiveButton(R.string.cancel, (dialog, i) -> {
-                                            }).show();
-                                }
-                                break;
-                            case 3:
-                                Intent shareLink = new Intent();
-                                shareLink.setAction(Intent.ACTION_SEND);
-                                shareLink.putExtra(Intent.EXTRA_SUBJECT, mAppName);
-                                shareLink.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=" + mPackageName
-                                        + "\n\n" + getString(R.string.share_message, BuildConfig.VERSION_NAME));
-                                shareLink.setType("text/plain");
-                                Intent shareIntent = Intent.createChooser(shareLink, getString(R.string.share_with));
-                                startActivity(shareIntent);
-                                break;
-                        }
-                    }
-                };
-            } else if (position == 1) {
-                if (Build.VERSION.SDK_INT < 29 && sPermissionUtils.isPermissionDenied(android.Manifest.permission.WRITE_EXTERNAL_STORAGE, requireActivity())) {
-                    requestPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-                } else {
-                    PackageDetails.exportApp(mPackageName, sPackageUtils.getSourceDir(mPackageName, requireActivity()), appIcon, requireActivity());
-                }
-            } else if (position == 2) {
-                new MaterialAlertDialogBuilder(requireActivity())
-                        .setIcon(appIcon)
-                        .setTitle(mAppName)
-                        .setMessage(getString(R.string.reset_message, mAppName))
-                        .setNegativeButton(R.string.cancel, (dialog, id) -> {
-                        })
-                        .setPositiveButton(R.string.yes, (dialog, id) ->
-                                PackageData.clearAppSettings(mPackageName)
-                        ).show();
-            }
-        });
-
-        requireActivity().getOnBackPressedDispatcher().addCallback(new OnBackPressedCallback(true) {
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
                 if (!isAdded()) return;
@@ -263,10 +125,173 @@ public class PackageInfoFragment extends Fragment {
         return mRootView;
     }
 
+    private void loadData() {
+        new sExecutor() {
+            List<PackageOptionsItems> optionsData;
+            List<PackageInfoItems> infoData;
+            Drawable appIcon;
+
+            @Override
+            public void onPreExecute() {
+            }
+
+            @Override
+            public void doInBackground() {
+                mRootOrShizuku = new RootShell().rootAccess() || new ShizukuShell().isReady();
+                appIcon = sPackageUtils.getAppIcon(mPackageName, requireActivity());
+                optionsData = getPackageOptionsData();
+                infoData = getPackageInfoData();
+            }
+
+            @Override
+            public void onPostExecute() {
+                if (!isAdded()) return;
+                
+                PackageOptionsAdapter optionsAdapter = new PackageOptionsAdapter(optionsData);
+                PackageInfoAdapter infoAdapter = new PackageInfoAdapter(infoData);
+                
+                optionsAdapter.setOnItemClickListener((position, v) -> handleOptionClick(position, appIcon));
+                infoAdapter.setOnItemClickListener((position, v) -> handleInfoClick(position, appIcon));
+                
+                mPackageOptionsRecycler.setAdapter(optionsAdapter);
+                mPackageInfoRecycler.setAdapter(infoAdapter);
+            }
+        }.execute();
+    }
+
+    private void handleOptionClick(int position, Drawable appIcon) {
+        List<PackageOptionsItems> options = getPackageOptionsData();
+        if (position < 0 || position >= options.size()) return;
+        
+        PackageOptionsItems item = options.get(position);
+        switch (item.getPosition()) {
+            case 0:
+                if (mPackageName.equals(BuildConfig.APPLICATION_ID)) {
+                    sCommonUtils.toast(getString(R.string.open_message), requireActivity()).show();
+                } else {
+                    Intent launchIntent = requireActivity().getPackageManager().getLaunchIntentForPackage(mPackageName);
+                    if (launchIntent != null) {
+                        startActivity(launchIntent);
+                    } else {
+                        sCommonUtils.toast(getString(R.string.open_failed, mAppName), requireActivity()).show();
+                    }
+                }
+                break;
+            case 1:
+                new ExploreAPKTasks(mAppName, mPackageName, sPackageUtils.getSourceDir(mPackageName, requireActivity()), requireActivity()).execute();
+                break;
+            case 2:
+                new MaterialAlertDialogBuilder(requireActivity())
+                        .setIcon(appIcon)
+                        .setTitle(mAppName)
+                        .setMessage(getString(R.string.disable_message,
+                                sPackageUtils.isEnabled(mPackageName, requireActivity()) ?
+                                        getString(R.string.disabled) : getString(R.string.enabled)))
+                        .setCancelable(false)
+                        .setNegativeButton(getString(R.string.cancel), (dialog, id) -> {
+                        })
+                        .setPositiveButton(getString(R.string.yes), (dialog, id) -> new DisableAppTasks(mAppName, mPackageName, requireActivity()).execute())
+                        .show();
+                break;
+            case 3:
+                if (mPackageName.equals(BuildConfig.APPLICATION_ID)) {
+                    sCommonUtils.toast(getString(R.string.uninstall_nope), requireActivity()).show();
+                } else if (!mSystemApp) {
+                    Intent intent = new Intent();
+                    intent.putExtra("packageName", mPackageName);
+                    requireActivity().setResult(Activity.RESULT_OK, intent);
+                    requireActivity().finish();
+                } else {
+                    PackageDetails.uninstallSystemApp(mPackageName, mAppName, appIcon, requireActivity());
+                }
+                break;
+            default:
+                Intent settings = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                Uri uri = Uri.fromParts("package", mPackageName, null);
+                settings.setData(uri);
+                startActivity(settings);
+                requireActivity().finish();
+                break;
+        }
+    }
+
+    private void handleInfoClick(int position, Drawable appIcon) {
+        if (position == 0) {
+            List<MenuItems> menuItems = new ArrayList<>();
+            menuItems.add(new MenuItems(getString(R.string.search_market_message, getString(R.string.playstore)), null, 0));
+            menuItems.add(new MenuItems(getString(R.string.search_market_message, getString(R.string.fdroid)), null, 1));
+            menuItems.add(new MenuItems(getString(R.string.export_details), null, 2));
+            menuItems.add(new MenuItems(getString(R.string.share), null, 3));
+
+            new BottomMenuDialog(menuItems, appIcon, null, mAppName, mPackageName, requireActivity()) {
+                @Override
+                public void onMenuItemClicked(int menuID) {
+                    switch (menuID) {
+                        case 0:
+                            sCommonUtils.launchUrl("https://play.google.com/store/apps/details?id=" + mPackageName, requireActivity());
+                            break;
+                        case 1:
+                            sCommonUtils.launchUrl("https://f-droid.org/packages/" + mPackageName, requireActivity());
+                            break;
+                        case 2:
+                            if (Build.VERSION.SDK_INT < 29 && sPermissionUtils.isPermissionDenied(android.Manifest.permission.WRITE_EXTERNAL_STORAGE, requireActivity())) {
+                                requestPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+                            } else {
+                                PackageData.makePackageFolder(requireActivity());
+                                File mJSON = new File(PackageData.getPackageDir(requireActivity()), mPackageName + "_" + sAPKUtils.getVersionCode(
+                                        sPackageUtils.getSourceDir(mPackageName, requireActivity()), requireActivity()) + ".json");
+                                sFileUtils.create(Objects.requireNonNull(PackageDetails.getPackageDetails(mPackageName, requireActivity())).toString(), mJSON);
+
+                                new MaterialAlertDialogBuilder(requireActivity())
+                                        .setIcon(R.mipmap.ic_launcher)
+                                        .setTitle(R.string.app_name)
+                                        .setMessage(getString(R.string.export_details_message, mJSON.getAbsolutePath()))
+                                        .setPositiveButton(R.string.cancel, (dialog, i) -> {
+                                        }).show();
+                            }
+                            break;
+                        case 3:
+                            Intent shareLink = new Intent();
+                            shareLink.setAction(Intent.ACTION_SEND);
+                            shareLink.putExtra(Intent.EXTRA_SUBJECT, mAppName);
+                            shareLink.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=" + mPackageName
+                                    + "\n\n" + getString(R.string.share_message, BuildConfig.VERSION_NAME));
+                            shareLink.setType("text/plain");
+                            Intent shareIntent = Intent.createChooser(shareLink, getString(R.string.share_with));
+                            startActivity(shareIntent);
+                            break;
+                    }
+                }
+            }.show();
+        } else if (position == 1) {
+            if (Build.VERSION.SDK_INT < 29 && sPermissionUtils.isPermissionDenied(android.Manifest.permission.WRITE_EXTERNAL_STORAGE, requireActivity())) {
+                requestPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            } else {
+                PackageDetails.exportApp(mPackageName, sPackageUtils.getSourceDir(mPackageName, requireActivity()), appIcon, requireActivity());
+            }
+        } else if (position == 2) {
+            new MaterialAlertDialogBuilder(requireActivity())
+                    .setIcon(appIcon)
+                    .setTitle(mAppName)
+                    .setMessage(getString(R.string.reset_message, mAppName))
+                    .setNegativeButton(R.string.cancel, (dialog, id) -> {
+                    })
+                    .setPositiveButton(R.string.yes, (dialog, id) ->
+                            PackageData.clearAppSettings(mPackageName)
+                    ).show();
+        }
+    }
+
     @SuppressLint("StringFormatInvalid")
     private List<PackageInfoItems> getPackageInfoData() {
         List<PackageInfoItems> mPackageInfoItems = new ArrayList<>();
-        boolean mAppBundle = new File(sPackageUtils.getSourceDir(mPackageName, requireActivity())).getName().equals("base.apk") && SplitAPKInstaller
+        if (mPackageName == null || requireActivity() == null) return mPackageInfoItems;
+        
+        String sourceDir = sPackageUtils.getSourceDir(mPackageName, requireActivity());
+        if (sourceDir == null) return mPackageInfoItems;
+        
+        boolean mAppBundle = new File(sourceDir).getName().equals("base.apk") && SplitAPKInstaller
                 .splitApks(sPackageUtils.getParentDir(mPackageName, requireActivity())).size() > 1;
         mPackageInfoItems.add(new PackageInfoItems(getString(R.string.package_id), mPackageName, null, null,
                 getString(R.string.more), sCommonUtils.getDrawable(R.drawable.ic_dots, requireActivity())));
@@ -292,6 +317,8 @@ public class PackageInfoFragment extends Fragment {
 
     private List<PackageOptionsItems> getPackageOptionsData() {
         List<PackageOptionsItems> mPackageOptionsItems = new ArrayList<>();
+        if (mPackageName == null || requireActivity() == null) return mPackageOptionsItems;
+
         if (mLaunchIntent && sPackageUtils.isEnabled(mPackageName, requireActivity())) {
             mPackageOptionsItems.add(new PackageOptionsItems(sCommonUtils.getDrawable(R.drawable.ic_open, requireActivity()), getString(R.string.open), 0));
         }

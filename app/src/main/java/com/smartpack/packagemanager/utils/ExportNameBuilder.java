@@ -37,13 +37,13 @@ public class ExportNameBuilder {
 
         switch (mode) {
             case APP_NAME:
-                return sanitize(label, separator);
+                return sanitize(normalizeLabel(label), separator);
             case APP_PACKAGE_VERSION:
-                return sanitize(label + "_" + pi.packageName + "_" + versionName + "_" + versionCode, separator);
+                return sanitize(normalizeLabel(label) + separator + pi.packageName + separator + versionName + separator + versionCode, separator);
             case CUSTOM_TEMPLATE:
                 String template = AppSettings.getExportTemplate(context);
                 String result = template
-                        .replace("{appname}", label)
+                        .replace("{appname}", normalizeLabel(label))
                         .replace("{packageid}", pi.packageName)
                         .replace("{versionname}", versionName)
                         .replace("{versioncode}", String.valueOf(versionCode))
@@ -53,6 +53,16 @@ public class ExportNameBuilder {
             default:
                 return sanitize(pi.packageName, separator);
         }
+    }
+
+    /**
+     * Normalizes app label for use in filenames: replaces spaces with underscores.
+     * This is applied to the AppName component specifically so spaces in app names
+     * are always represented by '_', independent of the user-configured separator.
+     */
+    private static String normalizeLabel(String label) {
+        if (label == null) return "";
+        return label.replace(" ", "_");
     }
 
     private static String sanitize(String input, String separator) {
