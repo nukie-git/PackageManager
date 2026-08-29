@@ -76,7 +76,7 @@ public class PackageDetails {
     public static List<PermissionsItems> getPermissions(String packageName, Context context) {
         List<PermissionsItems> perms = new ArrayList<>();
         try {
-            PackageInfo pi = PackageData.getPackageInfo(packageName, context);
+            PackageInfo pi = context.getPackageManager().getPackageInfo(packageName, PackageManager.GET_PERMISSIONS);
             if (pi != null && pi.requestedPermissions != null) {
                 for (int i = 0; i < pi.requestedPermissions.length; i++) {
                     boolean granted = false;

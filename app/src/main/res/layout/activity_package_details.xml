@@ -1,0 +1,24 @@
+<androidx.appcompat.widget.LinearLayoutCompat
+    android:id="@+id/layout_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical">
+
+    <include layout="@layout/layout_package_header" />
+
+    <com.google.android.material.tabs.TabLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:tabGravity="center"
+        android:layout_gravity="center"
+        app:tabMode="scrollable"
+        android:textAlignment="center"
+        android:id="@+id/tab_Layout" />
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/view_pager" />
+</androidx.appcompat.widget.LinearLayoutCompat>

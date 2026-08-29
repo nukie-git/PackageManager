@@ -1,10 +1,10 @@
 # AGENTS.md — SmartPack Package Manager AI Agent Guide
 
-**Project:** SmartPack Package Manager v7.11
+**Project:** SmartPack Package Manager v8.0 (versionCode 82)
 **Language:** Java (Android)  
 **Build System:** Gradle 8.12 with AGP 8.10.1  
 **Min SDK:** 24 → 26 (Android 7–15)  
-**Architecture Pattern:** Fragment-based UI with utility-layer package data abstraction
+**Architecture Pattern:** Fragment-based UI with utility-layer package data abstraction and standalone Settings Activity
 
 ---
 
@@ -65,12 +65,29 @@ The app organizes installed apps across **three core Fragment views** defined in
 - App type filter: `"appTypes"` key (values: `"all"`, `"system"`, `"user"`)
 - Sort order: `"sort_apps"` key → integer (0=name, 1=date, 2=size, etc.; verify in code)
 
-### Data Model
+### Data Model & Utilities
 - **`PackageItems.java`** — lightweight wrapper around `PackageInfo` used in UI lists (provides `getAppName()`, `isSystemApp()`, `getPackageName()` accessors)
-- **`ExportNameBuilder.java`** — orchestrates filename generation with three modes: `PACKAGE_NAME`, `APP_NAME`, `APP_PACKAGE_VERSION` (custom template mode is configurable)
+- **`ExportNameBuilder.java`** — orchestrates filename generation across 6 modes:
+  1. `APP_NAME` (`AppName.apk`)
+  2. `PACKAGE_NAME` (`com.package.name.apk`)
+  3. `APP_NAME_VERSION` (`AppName_1.0.apk`)
+  4. `PACKAGE_VERSION` (`com.package.name_1.0.apk`)
+  5. `APP_PACKAGE_VERSION` (`AppName_com.package.name_1.0.apk`)
+  6. `CUSTOM_TEMPLATE` (`{appname}`, `{packageid}`, `{versionname}`, `{versioncode}`, `{date}` with customizable separator)
+- **`SettingsActivity.java`** — standalone Activity with swipe-to-dismiss gesture (`RecyclerViewSwipeListener`) replacing the legacy `SettingsFragment`
+- **`ApplicationsViewModel.java`** — LiveData triggers for search, reload, and sort events
+- **Dialog suite:** `ADBUninstallDialog`, `BatchSelectionDialog`, `SortOptionsDialog`, `UninstallerDialog`, `RestoreAppDialog`
+
+### Mipmap & App Icon Conventions
+- **Asset Format:** All raster launcher icons use **WebP** (`ic_launcher.webp`, `ic_launcher_foreground.webp`, `ic_launcher_round.webp`) across `mipmap-mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi`.
+- **Adaptive & Themed Icons:** Defined in `mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml` using:
+  - `<background android:drawable="@color/ic_launcher_background"/>`
+  - `<foreground android:drawable="@mipmap/ic_launcher_foreground"/>`
+  - `<monochrome android:drawable="@mipmap/ic_launcher_foreground"/>` (for Android 13+ Material You dynamic theming)
+- **Legacy PNGs:** Do not mix `.png` launcher icons in mipmap folders to prevent AAPT from preferring outdated raster assets.
 
 ### Fragment Patterns
-- **Layout inflation & ViewBinding** — must check view IDs match exactly between Java `findViewById()` and XML `android:id` (confirmed bug in Task 0C: RecyclerView ID mismatch)
+- **Layout inflation & ViewBinding** — must check view IDs match exactly between Java `findViewById()` and XML `android:id`
 - **Background threads** → always use `new Thread()` or `ExecutorService`; sync results to UI via `requireActivity().runOnUiThread()` or `Handler.post()`
 - **RecyclerView lifecycle** — safe to call `notifyDataSetChanged()` only after adapter is bound in `onViewCreated`
 

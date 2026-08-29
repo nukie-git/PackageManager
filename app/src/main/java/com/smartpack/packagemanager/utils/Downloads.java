@@ -26,13 +26,13 @@ public class Downloads {
         for (File mFile : getDownloadList(context)) {
             if (sCommonUtils.getString("downloadTypes", "apks", context).equals("bundles")) {
                 if (mFile.exists() && (mFile.getName().endsWith(".apkm") || mFile.getName().endsWith(".apks"))) {
-                    if (searchText == null || PackageData.isTextMatched(mFile.getName(), searchText)) {
+                    if (searchText == null || mFile.getName().toLowerCase().contains(searchText.toLowerCase())) {
                         mData.add(mFile.getAbsolutePath());
                     }
                 }
             } else {
                 if (mFile.exists() && mFile.getName().endsWith(".apk")) {
-                    if (searchText == null || PackageData.isTextMatched(mFile.getName(), searchText)) {
+                    if (searchText == null || mFile.getName().toLowerCase().contains(searchText.toLowerCase())) {
                         mData.add(mFile.getAbsolutePath());
                     }
                 }

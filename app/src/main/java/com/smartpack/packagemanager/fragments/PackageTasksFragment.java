@@ -12,7 +12,6 @@ import static android.view.View.GONE;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -28,6 +27,7 @@ import android.widget.ProgressBar;
 import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.fragment.app.Fragment;
@@ -42,7 +42,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
-import com.smartpack.packagemanager.BuildConfig;
 import com.smartpack.packagemanager.R;
 import com.smartpack.packagemanager.adapters.PackageTasksAdapter;
 import com.smartpack.packagemanager.dialogs.BatchOptionsDialog;
@@ -85,12 +84,11 @@ public class PackageTasksFragment extends Fragment {
     private String mPackageNameRemoved = null, mSearchText = null;
     private View mRootView;
     private boolean mIsFirstLoad = true;
-    private FragmentPackagetasksBinding binding;
 
     @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        binding = FragmentPackagetasksBinding.inflate(inflater, container, false);
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        FragmentPackagetasksBinding binding = FragmentPackagetasksBinding.inflate(inflater, container, false);
         mRootView = binding.getRoot();
 
         mProgress = binding.progress;
@@ -159,19 +157,19 @@ public class PackageTasksFragment extends Fragment {
                 String mStatus = sCommonUtils.getString("appTypes", "all", requireActivity());
                 switch (tab.getPosition()) {
                     case 0:
-                        if (!mStatus.equals("all")) {
+                        if (!Objects.equals(mStatus, "all")) {
                             sCommonUtils.saveString("appTypes", "all", requireActivity());
                             loadUI(mSearchText, requireActivity());
                         }
                         break;
                     case 1:
-                        if (!mStatus.equals("system")) {
+                        if (!Objects.equals(mStatus, "system")) {
                             sCommonUtils.saveString("appTypes", "system", requireActivity());
                             loadUI(mSearchText, requireActivity());
                         }
                         break;
                     case 2:
-                        if (!mStatus.equals("user")) {
+                        if (!Objects.equals(mStatus, "user")) {
                             sCommonUtils.saveString("appTypes", "user", requireActivity());
                             loadUI(mSearchText, requireActivity());
                         }
@@ -345,8 +343,7 @@ public class PackageTasksFragment extends Fragment {
                 .setCancelable(false)
                 .setNegativeButton(getString(R.string.cancel), (dialogInterface, i) -> {
                 })
-                .setPositiveButton(getString(R.string.yes), (dialogInterface, i) -> {
-                    new BatchOptionsDialog(getString(R.string.uninstall_selected_question), getString(R.string.uninstall), mBatchList, activity) {
+                .setPositiveButton(getString(R.string.yes), (dialogInterface, i) -> new BatchOptionsDialog(getString(R.string.uninstall_selected_question), getString(R.string.uninstall), mBatchList, activity) {
                         @Override
                         public void apply(List<BatchOptionsItems> data) {
                             List<String> selected = new ArrayList<>();
@@ -365,8 +362,7 @@ public class PackageTasksFragment extends Fragment {
                                 handleUninstallEvent();
                             }
                         }
-                    };
-                })
+                    }.show())
                 .show();
     }
 
@@ -403,11 +399,10 @@ public class PackageTasksFragment extends Fragment {
                 if (mIsFirstLoad && shimmer != null) {
                     shimmer.setVisibility(View.VISIBLE);
                     shimmer.startShimmer();
-                    mRecyclerView.setVisibility(View.GONE);
                 } else {
                     mProgress.setVisibility(View.VISIBLE);
-                    mRecyclerView.setVisibility(View.GONE);
                 }
+                mRecyclerView.setVisibility(View.GONE);
             }
 
             @Override
@@ -598,7 +593,7 @@ public class PackageTasksFragment extends Fragment {
                     try {
                         PackageItems itemToRemove = null;
                         for (PackageItems item : PackageData.getRawData()) {
-                            if (item.getPackageName().equals(currentPackage)) {
+                            if (Objects.equals(item.getPackageName(), currentPackage)) {
                                 itemToRemove = item;
                                 break;
                             }
@@ -606,26 +601,21 @@ public class PackageTasksFragment extends Fragment {
                         if (itemToRemove != null) {
                             PackageData.getRawData().remove(itemToRemove);
                         }
-                        mBatchList.remove(0);
                         // Refresh display list
                         if (mData != null) {
-                            mData.removeIf(p -> p.getPackageName().equals(currentPackage));
-                            if (mRecycleViewAdapter != null) {
-                                mRecycleViewAdapter.notifyDataSetChanged();
-                            }
+                            mData.removeIf(p -> Objects.equals(p.getPackageName(), currentPackage));
                         }
                     } catch (Exception ignored) {}
-                    handleUninstallEvent();
                 } else {
                     try {
                         sCommonUtils.toast(getString(R.string.uninstall_status_failed, sPackageUtils.getAppName(currentPackage, requireActivity())), requireActivity()).show();
                     } catch (Exception ignored) {}
-                    mBatchList.remove(0);
-                    if (mRecycleViewAdapter != null) {
-                        mRecycleViewAdapter.notifyDataSetChanged();
-                    }
-                    handleUninstallEvent();
                 }
+                mBatchList.remove(0);
+                if (mRecycleViewAdapter != null) {
+                    mRecycleViewAdapter.notifyDataSetChanged();
+                }
+                handleUninstallEvent();
             }
     );
 
@@ -635,9 +625,7 @@ public class PackageTasksFragment extends Fragment {
         if (mSearchText != null) {
             mSearchWord.setText(null);
         }
-        if (mBatchList != null) {
-            mBatchList.clear();
-        }
+        mBatchList.clear();
         if (mRootShell != null && mRootShell.rootAccess()) mRootShell.closeSU();
     }
 

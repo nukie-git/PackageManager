@@ -1,0 +1,20 @@
+<LinearLayout
+    android:id="@+id/layout_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_gravity="start"
+    android:orientation="vertical"
+    android:gravity="start">
+
+    <com.google.android.material.textview.MaterialTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="10dp"
+        android:layout_marginVertical="5dp"
+        android:text="@string/settings"
+        android:layout_gravity="center"
+        style="@style/AppTheme.Title" />
+
+    <include layout="@layout/layout_recyclerview" />
+</LinearLayout>

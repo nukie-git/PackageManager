@@ -32,7 +32,6 @@ import com.smartpack.packagemanager.R;
 import com.smartpack.packagemanager.activities.ImageViewActivity;
 import com.smartpack.packagemanager.activities.PackageDetailsActivity;
 import com.smartpack.packagemanager.utils.AppSettings;
-import com.smartpack.packagemanager.utils.PackageData;
 import com.smartpack.packagemanager.utils.SerializableItems.PackageItems;
 import com.smartpack.packagemanager.utils.Utils;
 
@@ -91,7 +90,7 @@ public class PackageTasksAdapter extends RecyclerView.Adapter<PackageTasksAdapte
                 holder.appIcon.setVisibility(VISIBLE);
             }
 
-            if (searchText != null && PackageData.isTextMatched(data.get(position).getPackageName(), searchText)) {
+            if (searchText != null && data.get(position).getPackageName().toLowerCase().contains(searchText.toLowerCase())) {
                 holder.appID.setTypeface(null, Typeface.BOLD);
                 holder.appID.setText(Utils.fromHtml(data.get(position).getPackageName().replace(searchText, "<b><i><font color=\"" +
                         Color.RED + "\">" + searchText + "</font></i></b>")));
@@ -99,7 +98,7 @@ public class PackageTasksAdapter extends RecyclerView.Adapter<PackageTasksAdapte
                 holder.appID.setText(data.get(position).getPackageName());
             }
 
-            if (searchText != null && PackageData.isTextMatched(data.get(position).getAppName(), searchText)) {
+            if (searchText != null && data.get(position).getAppName().toLowerCase().contains(searchText.toLowerCase())) {
                 holder.appName.setTypeface(null, Typeface.BOLD);
             }
 

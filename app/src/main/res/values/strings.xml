@@ -11,7 +11,8 @@
     <string name="applications">Applications</string>
     <string name="apks">APK\'s</string>
     <string name="android_version">Android %s</string>
-    <string name="batch_options">Batch Options (%s)</string>
+    <string name="batch_options">Batch Options (%d)</string>
+    <string name="batch_options_show">Show Options</string>
     <string name="batch_list_added">%s is added to the batch list</string>
     <string name="batch_list_clear">Clear list</string>
     <string name="batch_list_removed">%s is removed from batch list</string>
@@ -74,6 +75,7 @@
     <string name="ignored">Ignored</string>
     <string name="initializing">Initializing…</string>
     <string name="install">Install</string>
+    <string name="installed_apps">Installed Apps</string>
     <string name="install_question">Install \'%s\'?</string>
     <string name="installation_cancel_message">Are you sure to cancel the installation?</string>
     <string name="installer">Installer</string>
@@ -87,11 +89,13 @@
     <string name="language_el" translatable="false">Ελληνικά</string>
     <string name="language_en" translatable="false">English (%s)</string>
     <string name="language_es" translatable="false">Español (%s)</string>
+    <string name="language_fa" translatable="false">فارسی</string>
     <string name="language_fr" translatable="false">français (%s)</string>
     <string name="language_hu" translatable="false">Magyar</string>
     <string name="language_in" translatable="false">bahasa Indonesia</string>
     <string name="language_ja" translatable="false">日本</string>
     <string name="language_ko" translatable="false">한국어</string>
+    <string name="language_lv" translatable="false">latviešu</string>
     <string name="language_pl" translatable="false">Polski"</string>
     <string name="language_pt" translatable="false">Português (%s)</string>
     <string name="language_ru" translatable="false">русский</string>

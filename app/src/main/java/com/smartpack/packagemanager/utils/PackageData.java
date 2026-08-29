@@ -30,7 +30,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import in.sunilpaulmathew.sCommon.CommonUtils.sCommonUtils;
 import in.sunilpaulmathew.sCommon.FileUtils.sFileUtils;
-import in.sunilpaulmathew.sCommon.PackageUtils.sPackageUtils;
 
 /*
  * Created by sunilpaulmathew <sunil.kde@gmail.com> on January 12, 2020
@@ -51,15 +50,6 @@ public class PackageData {
     private static volatile List<PackageItems> mRawData = null;
     private static volatile List<PackageItems> mRemovedData = null;
     private static volatile boolean mIsUninstalledScanned = false;
-
-    public static boolean isTextMatched(String text, String searchText) {
-        for (int a = 0; a < text.length() - searchText.length() + 1; a++) {
-            if (searchText.equalsIgnoreCase(text.substring(a, a + searchText.length()))) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     public static int getSortingType(Context context) {
         return sCommonUtils.getInt("sort_apps", 0, context);
@@ -90,16 +80,20 @@ public class PackageData {
             String appTypePref = sCommonUtils.getString("appTypes", "all", context);
             for (PackageItems item : rawData) {
                 boolean mAppType;
-                if (Objects.equals(appTypePref, "system")) {
-                    mAppType = item.isSystemApp();
-                } else if (Objects.equals(appTypePref, "user")) {
-                    mAppType = item.isUserApp();
-                } else {
-                    mAppType = true;
+                switch (appTypePref) {
+                    case "system":
+                        mAppType = item.isSystemApp();
+                        break;
+                    case "user":
+                        mAppType = item.isUserApp();
+                        break;
+                    default:
+                        mAppType = true;
+                        break;
                 }
                 if (mAppType && item.getPackageName().contains(".")) {
-                    if (searchTxt == null || (isTextMatched(item.getAppName(), searchTxt)
-                            || isTextMatched(item.getPackageName(), searchTxt))) {
+                    if (searchTxt == null || (item.getAppName().toLowerCase().contains(searchTxt.toLowerCase())
+                            || item.getPackageName().toLowerCase().contains(searchTxt.toLowerCase()))) {
                         mData.add(item);
                     }
                 }
@@ -130,14 +124,6 @@ public class PackageData {
         }
         android.util.Log.d("SmartPack", "getData: returning " + mData.size() + " items");
         return mData;
-    }
-
-    public static PackageInfo getPackageInfo(String packageName, Context context) {
-        try {
-            return context.getPackageManager().getPackageInfo(packageName, PackageManager.GET_PERMISSIONS);
-        } catch (Exception ignored) {
-        }
-        return null;
     }
 
     public static String getFileName(String packageName, Context context) {
@@ -255,7 +241,7 @@ public class PackageData {
                 }
                 
                 String appName = label.toString();
-                String apkPath = ai.sourceDir != null ? ai.sourceDir : "";
+                String apkPath = Objects.requireNonNullElse(ai.sourceDir, "");
                 if (removed) {
                     removedDataTemp.add(new PackageItems(
                             pi.packageName,

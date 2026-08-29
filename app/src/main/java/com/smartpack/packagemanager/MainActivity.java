@@ -29,7 +29,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.smartpack.packagemanager.activities.InstallerInstructionsActivity;
 import com.smartpack.packagemanager.fragments.ExportedAppsFragment;
 import com.smartpack.packagemanager.fragments.PackageTasksFragment;
-import com.smartpack.packagemanager.fragments.SettingsFragment;
+
 import com.smartpack.packagemanager.fragments.UninstalledAppsFragment;
 import com.smartpack.packagemanager.utils.tasks.MultipleAPKsTasks;
 import com.smartpack.packagemanager.utils.tasks.SingleAPKTasks;
@@ -99,8 +99,9 @@ public class MainActivity extends AppCompatActivity {
                             mFragment = new UninstalledAppsFragment();
                             break;
                         case 3:
-                            mFragment = new SettingsFragment();
-                            break;
+                            // Settings migrated to a standalone Activity (upstream v8.0)
+                            startActivity(new Intent(this, com.smartpack.packagemanager.activities.SettingsActivity.class));
+                            return true;
                     }
                     getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
                             mFragment).commit();

@@ -18,14 +18,14 @@ android {
     }
 
     namespace = 'com.smartpack.packagemanager'
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId "com.smartpack.packagemanager"
-        minSdkVersion 24
-        targetSdk = 37
-        versionCode 81
-        versionName "7.11"
+        minSdkVersion 26
+        targetSdk = 35
+        versionCode 82
+        versionName "v8.0"
         vectorDrawables.useSupportLibrary = true
         testFunctionalTest = false
         testHandleProfiling = false

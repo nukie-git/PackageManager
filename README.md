@@ -2,7 +2,7 @@
 
 <p style="text-align: center"><img src="https://raw.githubusercontent.com/SmartPack/PackageManager/master/fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" alt="" width="250" height="450" /> <img src="https://raw.githubusercontent.com/SmartPack/PackageManager/master/fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" alt="" width="250" height="450" /> <img src="https://raw.githubusercontent.com/SmartPack/PackageManager/master/fastlane/metadata/android/en-US/images/phoneScreenshots/7.jpg" alt="" width="250" height="450" /></p>
 
-[![](https://img.shields.io/badge/Package%20Manager-7.11-green)](https://play.google.com/store/apps/details?id=com.smartpack.packagemanager.pro)
+[![](https://img.shields.io/badge/Package%20Manager-8.0-green)](https://play.google.com/store/apps/details?id=com.smartpack.packagemanager.pro)
 ![](https://img.shields.io/github/languages/top/SmartPack/PackageManager)
 ![](https://img.shields.io/github/contributors/smartpack/PackageManager)
 ![](https://img.shields.io/github/license/smartpack/PackageManager)
@@ -22,7 +22,8 @@ A simple yet powerful Android app for managing both **system** and **user** appl
 
 ## 📱 Requirements
 
-- 📲 Android device
+- 📲 Android device (Android 7.0 / API 24+)
+- 🎨 Android 13+ Material You themed icons supported
 - 🔓 **Root access** or **Shizuku integration** required for some advanced features  
 
 ---
@@ -44,9 +45,16 @@ A simple yet powerful Android app for managing both **system** and **user** appl
 - 🔹 Advanced features:
     - 📦 Install app bundles / split APKs
     - 🔍 Explore APK contents (experimental)
-    - 📤 Export apps (single or batch)
+    - 📤 Export apps (single or batch) with **6 customizable naming formats**:
+        - App Name (`AppName.apk`)
+        - Package Name (`com.example.app.apk`)
+        - App Name + Version (`AppName_1.0.apk`)
+        - Package Name + Version (`com.example.app_1.0.apk`)
+        - App Name + Package + Version (`AppName_com.example.app_1.0.apk`)
+        - **Custom Template** with placeholder tokens (`{appname}`, `{packageid}`, `{versionname}`, `{versioncode}`, `{date}`) and custom separators
     - 🧹 Debloat (uninstall system apps) - requires root or Shizuku
     - 🚫 Disable/enable any app - requires root or Shizuku
+    - ⚙️ Standalone Settings Activity with swipe-to-dismiss navigation
 
 ---
 

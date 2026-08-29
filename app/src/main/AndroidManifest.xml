@@ -67,6 +67,9 @@
         <activity android:name=".activities.PackageExploreActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:exported="false" />
+        <activity android:name=".activities.SettingsActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:exported="false" />
         <activity android:name=".activities.TextViewActivity"
             android:exported="false" />
 
