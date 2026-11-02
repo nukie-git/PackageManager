@@ -35,12 +35,18 @@ public class ImportExternalApkTask extends sExecutor {
 
     private final Activity mActivity;
     private final List<Object> mSources = new ArrayList<>();
+    private final Runnable mOnComplete;
     private ProgressDialog mProgressDialog;
     private int mSuccessCount = 0;
 
     public ImportExternalApkTask(List<?> sources, Activity activity) {
+        this(sources, activity, null);
+    }
+
+    public ImportExternalApkTask(List<?> sources, Activity activity, Runnable onComplete) {
         this.mSources.addAll(sources);
         this.mActivity = activity;
+        this.mOnComplete = onComplete;
     }
 
     @SuppressLint("StringFormatInvalid")
@@ -161,6 +167,9 @@ public class ImportExternalApkTask extends sExecutor {
     @Override
     public void onPostExecute() {
         mProgressDialog.dismiss();
+        if (mOnComplete != null) {
+            mOnComplete.run();
+        }
         if (mSuccessCount > 0) {
             new MaterialAlertDialogBuilder(mActivity)
                     .setIcon(R.mipmap.ic_launcher)

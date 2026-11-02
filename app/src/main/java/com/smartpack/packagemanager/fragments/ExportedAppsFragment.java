@@ -81,13 +81,11 @@ public class ExportedAppsFragment extends Fragment {
             registerForActivityResult(new ActivityResultContracts.OpenMultipleDocuments(),
                     uris -> {
                         if (uris != null && !uris.isEmpty()) {
-                            new com.smartpack.packagemanager.utils.tasks.ImportExternalApkTask(uris, requireActivity()) {
-                                @Override
-                                public void onPostExecute() {
-                                    super.onPostExecute();
+                            new com.smartpack.packagemanager.utils.tasks.ImportExternalApkTask(uris, requireActivity(), () -> {
+                                if (isAdded() && getActivity() != null) {
                                     loadUI(mSearchText).execute();
                                 }
-                            }.execute();
+                            }).execute();
                         }
                     });
 
@@ -112,7 +110,11 @@ public class ExportedAppsFragment extends Fragment {
                 return;
             }
         }
-        new com.smartpack.packagemanager.utils.tasks.APKScannerTasks(requireActivity()).execute();
+        new com.smartpack.packagemanager.utils.tasks.APKScannerTasks(requireActivity(), () -> {
+            if (isAdded() && getActivity() != null) {
+                loadUI(mSearchText).execute();
+            }
+        }).execute();
     }
 
     @Nullable

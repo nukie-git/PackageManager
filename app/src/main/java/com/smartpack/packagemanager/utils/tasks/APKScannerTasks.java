@@ -37,12 +37,18 @@ import in.sunilpaulmathew.sCommon.CommonUtils.sExecutor;
 public class APKScannerTasks extends sExecutor {
 
     private final Activity mActivity;
+    private final Runnable mOnComplete;
     private ProgressDialog mProgressDialog;
     private final List<String> mFoundPaths = new ArrayList<>();
     private final Set<String> mScannedPaths = new HashSet<>();
 
     public APKScannerTasks(Activity activity) {
+        this(activity, null);
+    }
+
+    public APKScannerTasks(Activity activity, Runnable onComplete) {
         this.mActivity = activity;
+        this.mOnComplete = onComplete;
     }
 
     @SuppressLint("StringFormatInvalid")
@@ -162,7 +168,7 @@ public class APKScannerTasks extends sExecutor {
                     }
                 }
                 if (!selectedPaths.isEmpty()) {
-                    new ImportExternalApkTask(selectedPaths, mActivity).execute();
+                    new ImportExternalApkTask(selectedPaths, mActivity, mOnComplete).execute();
                 }
             }
         };
